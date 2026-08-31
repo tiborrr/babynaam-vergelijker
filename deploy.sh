@@ -26,6 +26,7 @@ rsync -avz -e "${SSH_OPTS}" \
     ranker.html \
     compare.html \
     storage.js \
+    similar-names.js \
     i18n.js \
     sitemap.xml \
     robots.txt \

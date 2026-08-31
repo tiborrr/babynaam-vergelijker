@@ -66,6 +66,13 @@
             namesPlaceholder: 'Enter or paste names (one per line)...',
             personRequiredAlert: 'Please enter your name.',
             minNamesAlert: 'Please enter at least 2 names to compare.',
+            findSimilarBtn: "✨ Find Variations",
+            variationsFound: "Found {count} variations for your candidate names",
+            variationsAction: "Variations",
+            variationsModalTitle: "Similar Variations of \"{name}\"",
+            variationsModalSub: "Select variations to add and start a new ranking round.",
+            noVariationsFound: "No similar variations found.",
+            startRerankWithVariations: "Start Round {round} with {count} Names →",
 
             // Import Modal
             modalImportTitle: 'Import Sessions',
@@ -197,6 +204,13 @@
             namesPlaceholder: 'Voer namen in (één per regel)...',
             personRequiredAlert: 'Vul alsjeblieft je naam in.',
             minNamesAlert: 'Vul minimaal 2 namen in om te kunnen vergelijken.',
+            findSimilarBtn: "✨ Vind Variaties",
+            variationsFound: "{count} variaties gevonden voor jouw namen",
+            variationsAction: "Variaties",
+            variationsModalTitle: "Vergelijkbare Variaties van \"{name}\"",
+            variationsModalSub: "Selecteer variaties om toe te voegen en start een nieuwe ronde.",
+            noVariationsFound: "Geen vergelijkbare variaties gevonden.",
+            startRerankWithVariations: "Start Ronde {round} met {count} Namen →",
 
             // Import Modal
             modalImportTitle: 'Sessies Importeren',
@@ -328,6 +342,13 @@
             namesPlaceholder: 'Entrez les prénoms (un par ligne)...',
             personRequiredAlert: 'Veuillez saisir votre prénom.',
             minNamesAlert: 'Veuillez entrer au moins 2 prénoms.',
+            findSimilarBtn: "✨ Trouver des Variantes",
+            variationsFound: "{count} variantes trouvées pour vos prénoms",
+            variationsAction: "Variantes",
+            variationsModalTitle: "Variantes Similaires de « {name} »",
+            variationsModalSub: "Sélectionnez des variantes pour lancer un nouveau tour de classement.",
+            noVariationsFound: "Aucune variante similaire trouvée.",
+            startRerankWithVariations: "Lancer le Tour {round} avec {count} Prénoms →",
 
             // Import Modal
             modalImportTitle: 'Importer des Sessions',
@@ -459,6 +480,13 @@
             namesPlaceholder: 'Introduce nombres (uno por línea)...',
             personRequiredAlert: 'Por favor, introduce tu nombre.',
             minNamesAlert: 'Introduce al menos 2 nombres para comparar.',
+            findSimilarBtn: "✨ Buscar Variantes",
+            variationsFound: "Se encontraron {count} variantes para tus nombres",
+            variationsAction: "Variantes",
+            variationsModalTitle: "Variantes Similares de «{name}»",
+            variationsModalSub: "Selecciona variantes para iniciar una nueva ronda de clasificación.",
+            noVariationsFound: "No se encontraron variantes similares.",
+            startRerankWithVariations: "Iniciar Ronda {round} con {count} Nombres →",
 
             // Import Modal
             modalImportTitle: 'Importar Sesiones',
@@ -590,6 +618,13 @@
             namesPlaceholder: 'Namen eingeben (einer pro Zeile)...',
             personRequiredAlert: 'Bitte gib deinen Namen ein.',
             minNamesAlert: 'Bitte gib mindestens 2 Namen ein.',
+            findSimilarBtn: "✨ Varianten finden",
+            variationsFound: "{count} Varianten für deine Namen gefunden",
+            variationsAction: "Varianten",
+            variationsModalTitle: "Ähnliche Varianten von „{name}“",
+            variationsModalSub: "Wähle Varianten aus, um eine neue Rangliste zu starten.",
+            noVariationsFound: "Keine ähnlichen Varianten gefunden.",
+            startRerankWithVariations: "Runde {round} mit {count} Namen starten →",
 
             // Import Modal
             modalImportTitle: 'Sitzungen importieren',
@@ -721,6 +756,13 @@
             namesPlaceholder: 'أدخل الأسماء (اسم واحد في كل سطر)...',
             personRequiredAlert: 'يرجى إدخال اسمك.',
             minNamesAlert: 'يرجى إدخال اسمين على الأقل للمقارنة.',
+            findSimilarBtn: "✨ البحث عن بدائل",
+            variationsFound: "تم العثور على {count} بدائل لأسمائك",
+            variationsAction: "بدائل",
+            variationsModalTitle: "بدائل مشابهة لاسم \"{name}\"",
+            variationsModalSub: "اختر البدائل لإضافتها وبدء جولة ترتيب جديدة.",
+            noVariationsFound: "لم يتم العثور على بدائل مشابهة.",
+            startRerankWithVariations: "بدء الجولة {round} مع {count} أسماء ←",
 
             // Import Modal
             modalImportTitle: 'استيراد الجلسات',

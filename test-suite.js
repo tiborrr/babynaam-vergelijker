@@ -21,8 +21,9 @@ const localStorageMock = (function() {
 global.window = global;
 global.localStorage = localStorageMock;
 
-// Load storage.js
+// Load storage.js & similar-names.js
 require('./storage.js');
+require('./similar-names.js');
 
 let passedTests = 0;
 let failedTests = 0;
@@ -354,6 +355,32 @@ function testCompareLogic() {
     const sitemapXml = fs.readFileSync(path.join(__dirname, 'sitemap.xml'), 'utf8');
     assert(sitemapXml.includes('<loc>https://baby.casteleijn.com/</loc>'), 'sitemap.xml includes index URL');
     assert(sitemapXml.includes('hreflang="ar"'), 'sitemap.xml includes multi-lingual alternate tags');
+
+    // ── Test 9: Pure JS Levenshtein & Name Variations Engine ─────────────────
+    console.log('\nTest Suite 9: Pure JS Levenshtein & Variations Engine');
+    
+    assert(typeof BNR.levenshtein === 'function', 'Levenshtein algorithm is defined on BNR');
+    assert(BNR.levenshtein('kitten', 'sitting') === 3, 'Levenshtein computes standard distance (kitten -> sitting = 3)');
+    assert(BNR.levenshtein('Noah', 'Noa') === 1, 'Levenshtein distance between Noah and Noa is 1');
+    assert(BNR.levenshtein('same', 'same') === 0, 'Levenshtein distance between identical strings is 0');
+
+    // Test findSimilarNames
+    const sebasVars = BNR.findSimilarNames('Sebas', { limit: 5 });
+    const sebasNames = sebasVars.map(v => v.name);
+    assert(sebasNames.includes('Sebastian') || sebasNames.includes('Bas'), 'Finds "Sebastian" or "Bas" for "Sebas"');
+
+    const noahVars = BNR.findSimilarNames('Noah', { limit: 5 });
+    const noahNames = noahVars.map(v => v.name);
+    assert(noahNames.includes('Noa') || noahNames.includes('Norah'), 'Finds "Noa" or "Norah" for "Noah"');
+
+    const saraVars = BNR.findSimilarNames('Sara', { limit: 5 });
+    const saraNames = saraVars.map(v => v.name);
+    assert(saraNames.includes('Sarah'), 'Finds "Sarah" for "Sara"');
+
+    // Test findSimilarForList
+    const listSuggestions = BNR.findSimilarForList(['Sebas', 'Noah', 'Sara'], { limit: 8 });
+    assert(listSuggestions.length > 0, 'findSimilarForList returns aggregated suggestions');
+    assert(!listSuggestions.some(s => ['Sebas', 'Noah', 'Sara'].includes(s.name)), 'Excludes current candidate names from suggestions');
 
     console.log('\n===========================================');
     console.log(`🏁 Test Summary: ${passedTests} passed, ${failedTests} failed`);

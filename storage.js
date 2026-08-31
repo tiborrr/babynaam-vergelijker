@@ -2943,7 +2943,7 @@ function createExportData(sessionsToExport = null) {
 
 // ─── Export as global (no bundler needed) ────────────────────
 
-window.BNR = {
+const BNR_API = {
     loadSessions,
     saveSessions,
     getSession,
@@ -2957,3 +2957,13 @@ window.BNR = {
     createExportData,
     STARTER_PACKS
 };
+
+if (typeof window !== 'undefined') {
+    window.BNR = BNR_API;
+} else if (typeof global !== 'undefined') {
+    global.BNR = BNR_API;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = BNR_API;
+}

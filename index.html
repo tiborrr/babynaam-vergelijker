@@ -92,6 +92,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
     <script src="storage.js"></script>
+    <script src="similar-names.js"></script>
     <script src="i18n.js"></script>
     <script>
         tailwind.config = {
@@ -289,9 +290,21 @@
                     <label for="input-names" class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                         <span data-i18n="candidateNamesLabel">Candidate Names</span> <span id="names-count" class="text-stone-700 font-normal lowercase">(0 names)</span>
                     </label>
-                    <button id="modal-sort-az" data-i18n="sortAZ" type="button" class="text-xs text-stone-600 hover:text-stone-900 font-medium hover:underline">Sort A–Z</button>
+                    <div class="flex items-center gap-2">
+                        <button id="modal-find-similar" data-i18n="findSimilarBtn" type="button" class="text-xs text-stone-700 hover:text-stone-900 font-medium px-2 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 transition-colors">✨ Find Variations</button>
+                        <button id="modal-sort-az" data-i18n="sortAZ" type="button" class="text-xs text-stone-600 hover:text-stone-900 font-medium hover:underline">Sort A–Z</button>
+                    </div>
                 </div>
                 <textarea id="input-names" data-i18n-attr="placeholder" data-i18n="namesPlaceholder" rows="5" class="border border-stone-200 rounded-xl p-3 text-sm resize-none outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-stone-50/50 font-sans leading-relaxed transition-all placeholder:text-stone-400" placeholder="Enter or paste names (one per line)..."></textarea>
+                
+                <!-- Dynamic Variations Suggestion Box -->
+                <div id="suggestions-box" class="hidden mt-1 p-2.5 bg-stone-100/90 border border-stone-200 rounded-xl text-xs">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span id="suggestions-title" class="font-medium text-stone-700 text-[11px]">✨ Tap variation to add:</span>
+                        <button type="button" id="close-suggestions" class="text-stone-400 hover:text-stone-700 font-bold px-1">&times;</button>
+                    </div>
+                    <div id="suggestions-chips" class="flex flex-wrap gap-1.5"></div>
+                </div>
             </div>
 
             <button id="modal-start" type="submit" class="w-full bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium py-3 rounded-xl transition-all active:scale-[0.99] text-sm shadow-sm flex items-center justify-center gap-1.5 mt-1">
@@ -648,6 +661,7 @@
 
     document.getElementById('pack-clear').addEventListener('click', () => {
         document.getElementById('input-names').value = '';
+        document.getElementById('suggestions-box').classList.add('hidden');
         updateNamesCount();
     });
 
@@ -657,6 +671,52 @@
         names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
         ta.value = names.join('\n');
         updateNamesCount();
+    });
+
+    // Find Variations in Modal
+    document.getElementById('modal-find-similar').addEventListener('click', () => {
+        const ta = document.getElementById('input-names');
+        const currentNames = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
+        const box = document.getElementById('suggestions-box');
+        const chipsContainer = document.getElementById('suggestions-chips');
+
+        if (currentNames.length === 0) {
+            toast(BNR_I18N.t('minNamesAlert'));
+            return;
+        }
+
+        const variations = BNR.findSimilarForList(currentNames, { limit: 10, category: selectedCat });
+        if (variations.length === 0) {
+            toast(BNR_I18N.t('noVariationsFound'));
+            box.classList.add('hidden');
+            return;
+        }
+
+        chipsContainer.innerHTML = '';
+        variations.forEach(item => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'inline-flex items-center gap-1 bg-white hover:bg-stone-200 border border-stone-300 px-2.5 py-1 rounded-lg text-xs font-medium text-stone-800 transition-all active:scale-95 shadow-sm';
+            btn.innerHTML = `<span>+ ${BNR.escapeHtml(item.name)}</span> <span class="text-[10px] text-stone-400 font-normal">(${BNR.escapeHtml(item.basedOn)})</span>`;
+            
+            btn.addEventListener('click', () => {
+                let list = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
+                if (!list.includes(item.name)) {
+                    list.push(item.name);
+                    ta.value = list.join('\n');
+                    updateNamesCount();
+                }
+                btn.classList.add('opacity-40', 'pointer-events-none', 'line-through');
+            });
+            chipsContainer.appendChild(btn);
+        });
+
+        box.classList.remove('hidden');
+        toast(BNR_I18N.t('variationsFound', { count: variations.length }));
+    });
+
+    document.getElementById('close-suggestions').addEventListener('click', () => {
+        document.getElementById('suggestions-box').classList.add('hidden');
     });
 
     document.getElementById('form-new-session').addEventListener('submit', () => {
