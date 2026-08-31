@@ -1,0 +1,51 @@
+/* Staggered fade-up on load */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+    opacity: 0;
+    animation: fadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.fade-up-d1 { animation-delay: 0.06s; }
+.fade-up-d2 { animation-delay: 0.14s; }
+.fade-up-d3 { animation-delay: 0.22s; }
+.fade-up-d4 { animation-delay: 0.32s; }
+.fade-up-d5 { animation-delay: 0.42s; }
+
+/* Hero duel floating cards */
+@keyframes floatLeft {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50%      { transform: translateY(-10px) rotate(-1deg); }
+}
+@keyframes floatRight {
+    0%, 100% { transform: translateY(-4px) rotate(2deg); }
+    50%      { transform: translateY(6px) rotate(1deg); }
+}
+.hero-card-left  { animation: floatLeft 3.6s ease-in-out infinite; }
+.hero-card-right { animation: floatRight 3.8s ease-in-out 0.4s infinite; }
+
+/* Hero pulse glow on the "vs" badge */
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(28,24,21,0.15); }
+    50%      { box-shadow: 0 0 0 10px rgba(28,24,21,0); }
+}
+.pulse-glow { animation: pulseGlow 2.4s ease-in-out infinite; }
+
+/* Bento card hover lift */
+.bento-card {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+.bento-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px -6px rgba(40,30,20,0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fade-up, .hero-card-left, .hero-card-right, .pulse-glow {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}

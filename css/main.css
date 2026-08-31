@@ -1,0 +1,62 @@
+@import "../fonts/fonts.css";
+
+@view-transition {
+    navigation: auto;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #FAF8F5;
+    color: #1C1815;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Modern top-layer dialog transitions with @starting-style */
+dialog {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+    transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                display 0.22s allow-discrete,
+                overlay 0.22s allow-discrete;
+}
+
+dialog[open] {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
+
+@starting-style {
+    dialog[open] {
+        opacity: 0;
+        transform: scale(0.97) translateY(6px);
+    }
+}
+
+dialog::backdrop {
+    background-color: rgba(28, 24, 21, 0);
+    backdrop-filter: blur(0px);
+    transition: background-color 0.22s ease-out,
+                backdrop-filter 0.22s ease-out,
+                display 0.22s allow-discrete,
+                overlay 0.22s allow-discrete;
+}
+
+dialog[open]::backdrop {
+    background-color: rgba(28, 24, 21, 0.35);
+    backdrop-filter: blur(4px);
+}
+
+@starting-style {
+    dialog[open]::backdrop {
+        background-color: rgba(28, 24, 21, 0);
+        backdrop-filter: blur(0px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    dialog, dialog::backdrop {
+        transform: none !important;
+        transition-duration: 0.01ms !important;
+    }
+}

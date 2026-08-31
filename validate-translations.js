@@ -31,6 +31,9 @@ const filesToScan = [
     'index.html',
     'ranker.html',
     'compare.html',
+    'js/index.js',
+    'js/ranker.js',
+    'js/compare.js',
     'storage.js',
     'similar-names.js'
 ];
