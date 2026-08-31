@@ -170,25 +170,46 @@
                 </div>
             </div>
 
-            <div class="flex flex-col gap-1.5">
+            <!-- Candidate Names Section -->
+            <div class="flex flex-col gap-2">
+                <!-- Label & Controls -->
                 <div class="flex items-center justify-between">
-                    <label for="input-names" class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
-                        <span data-i18n="candidateNamesLabel">Candidate Names</span> <span id="names-count" class="text-stone-700 font-normal lowercase">(0 names)</span>
+                    <label class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 flex items-center gap-1.5">
+                        <span data-i18n="candidateNamesLabel">Candidate Names</span>
+                        <span id="names-count" class="text-stone-700 font-normal lowercase">(0 names)</span>
                     </label>
                     <div class="flex items-center gap-2">
-                        <button id="modal-find-similar" data-i18n="findSimilarBtn" type="button" class="text-xs text-stone-700 hover:text-stone-900 font-medium px-2 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 transition-colors">✨ Find Variations</button>
                         <button id="modal-sort-az" data-i18n="sortAZ" type="button" class="text-xs text-stone-600 hover:text-stone-900 font-medium hover:underline">Sort A–Z</button>
+                        <button id="toggle-bulk-mode" type="button" class="text-xs text-stone-600 hover:text-stone-900 font-medium bg-stone-100 hover:bg-stone-200/80 px-2 py-0.5 rounded-md transition-colors">
+                            <span id="bulk-toggle-label" data-i18n="bulkEdit">Bulk Edit</span>
+                        </button>
                     </div>
                 </div>
-                <textarea id="input-names" data-i18n-attr="placeholder" data-i18n="namesPlaceholder" rows="5" class="border border-stone-200 rounded-xl p-3 text-sm resize-none outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-stone-50/50 font-sans leading-relaxed transition-all placeholder:text-stone-400" placeholder="Enter or paste names (one per line)..."></textarea>
+
+                <!-- Quick Add Input -->
+                <div id="quick-add-container" class="flex gap-1.5">
+                    <input id="input-quick-add" type="text" data-i18n-attr="placeholder" data-i18n="quickAddPlaceholder" placeholder="Type a name & press Enter (or paste)..." class="flex-1 border border-stone-200 rounded-xl px-3.5 py-2 text-sm outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-stone-50/50 transition-all placeholder:text-stone-400">
+                    <button id="btn-quick-add" type="button" class="bg-stone-900 hover:bg-stone-800 text-stone-50 px-3.5 py-2 rounded-xl text-xs font-medium transition-all active:scale-95 shadow-xs">
+                        <span data-i18n="addBtn">Add</span>
+                    </button>
+                </div>
+
+                <!-- Interactive Chips Deck -->
+                <div id="chips-deck-container" class="min-h-[100px] max-h-[180px] overflow-y-auto p-2.5 bg-stone-50/80 border border-stone-200 rounded-xl flex flex-wrap gap-1.5 content-start transition-all">
+                    <p id="chips-empty-notice" data-i18n="emptyNamesNotice" class="text-xs text-stone-400 m-auto py-6 text-center select-none">
+                        No names added yet. Type a name above or pick a Top List!
+                    </p>
+                </div>
+
+                <!-- Raw Textarea Mode (Hidden by default, toggled via Bulk Edit) -->
+                <textarea id="input-names" data-i18n-attr="placeholder" data-i18n="namesPlaceholder" rows="5" class="hidden border border-stone-200 rounded-xl p-3 text-sm resize-none outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-stone-50/50 font-sans leading-relaxed transition-all placeholder:text-stone-400" placeholder="Enter or paste names (one per line)..."></textarea>
                 
-                <!-- Dynamic Variations Suggestion Box -->
-                <div id="suggestions-box" class="hidden mt-1 p-2.5 bg-stone-100/90 border border-stone-200 rounded-xl text-xs">
-                    <div class="flex items-center justify-between mb-1.5">
-                        <span id="suggestions-title" class="font-medium text-stone-700 text-[11px]">✨ Tap variation to add:</span>
-                        <button type="button" id="close-suggestions" class="text-stone-400 hover:text-stone-700 font-bold px-1">&times;</button>
+                <!-- Smart Suggestions Shelf -->
+                <div id="suggestions-shelf" class="hidden pt-1 border-t border-stone-100 flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-[11px] font-medium text-stone-500">
+                        <span data-i18n="inspirationsTitle">💡 Suggestions for your list</span>
                     </div>
-                    <div id="suggestions-chips" class="flex flex-wrap gap-1.5"></div>
+                    <div id="suggestions-chips" class="flex flex-wrap gap-1.5 max-h-[72px] overflow-y-auto"></div>
                 </div>
             </div>
 

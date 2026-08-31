@@ -46,20 +46,132 @@
 
     [modalNew, modalImport, modalExport].forEach(setupDialogBackdropDismiss);
 
-    // ── New Session Dialog ───────────────────────────
-    function updateNamesCount() {
+    // ── New Session Dialog & Interactive Candidate Deck ─────────────────
+    let currentCandidates = [];
+    let isBulkEditMode = false;
+
+    function syncTextareaFromCandidates() {
         const ta = document.getElementById('input-names');
-        const count = ta.value.split('\n').map(n => n.trim()).filter(Boolean).length;
-        document.getElementById('names-count').textContent = BNR_I18N.t('namesCount', { count });
+        if (ta) ta.value = currentCandidates.join('\n');
     }
 
-    document.getElementById('input-names').addEventListener('input', updateNamesCount);
+    function syncCandidatesFromTextarea() {
+        const ta = document.getElementById('input-names');
+        if (!ta) return;
+        const parsed = ta.value.split(/[\n,]+/).map(n => n.trim().slice(0, 60)).filter(Boolean);
+        const unique = [];
+        const seen = new Set();
+        for (const name of parsed) {
+            const lower = name.toLowerCase();
+            if (!seen.has(lower)) {
+                seen.add(lower);
+                unique.push(name);
+            }
+        }
+        currentCandidates = unique;
+    }
+
+    function updateNamesCount() {
+        const count = currentCandidates.length;
+        const countEl = document.getElementById('names-count');
+        if (countEl) countEl.textContent = BNR_I18N.t('namesCount', { count });
+    }
+
+    function renderSuggestionsShelf() {
+        const shelf = document.getElementById('suggestions-shelf');
+        const chipsContainer = document.getElementById('suggestions-chips');
+        if (!shelf || !chipsContainer || !window.BNR || typeof BNR.findSimilarForList !== 'function') return;
+
+        if (currentCandidates.length === 0) {
+            shelf.classList.add('hidden');
+            return;
+        }
+
+        const variations = BNR.findSimilarForList(currentCandidates, { limit: 8, category: selectedCat });
+        if (variations.length === 0) {
+            shelf.classList.add('hidden');
+            return;
+        }
+
+        chipsContainer.innerHTML = '';
+        variations.forEach(item => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'inline-flex items-center gap-1 bg-white hover:bg-stone-100 border border-stone-200 px-2 py-0.5 rounded-lg text-xs font-medium text-stone-700 hover:text-stone-900 transition-all active:scale-95 shadow-xs';
+            btn.innerHTML = `<span>+ ${BNR.escapeHtml(item.name)}</span>`;
+            btn.title = `Inspired by ${item.basedOn}`;
+            btn.addEventListener('click', () => {
+                addCandidateNames([item.name]);
+            });
+            chipsContainer.appendChild(btn);
+        });
+
+        shelf.classList.remove('hidden');
+    }
+
+    function renderChipsDeck() {
+        const container = document.getElementById('chips-deck-container');
+        if (!container) return;
+
+        syncTextareaFromCandidates();
+        updateNamesCount();
+
+        if (currentCandidates.length === 0) {
+            container.innerHTML = `<p id="chips-empty-notice" class="text-xs text-stone-400 m-auto py-6 text-center select-none">${BNR_I18N.t('emptyNamesNotice')}</p>`;
+            renderSuggestionsShelf();
+            return;
+        }
+
+        container.innerHTML = '';
+        currentCandidates.forEach((name, index) => {
+            const chip = document.createElement('span');
+            chip.className = 'inline-flex items-center gap-1 bg-white border border-stone-200/90 text-stone-800 px-2.5 py-1 rounded-lg text-xs font-medium shadow-xs hover:border-stone-400 transition-all group';
+            chip.innerHTML = `
+                <span class="font-sans">${BNR.escapeHtml(name)}</span>
+                <button type="button" data-index="${index}" class="text-stone-300 group-hover:text-stone-600 hover:text-rose-600 p-0.5 rounded-md transition-colors leading-none font-bold" title="Remove">&times;</button>
+            `;
+
+            chip.querySelector('button').addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentCandidates.splice(index, 1);
+                renderChipsDeck();
+            });
+
+            container.appendChild(chip);
+        });
+
+        renderSuggestionsShelf();
+    }
+
+    function addCandidateNames(namesArray) {
+        if (!Array.isArray(namesArray) || namesArray.length === 0) return;
+        const seen = new Set(currentCandidates.map(n => n.toLowerCase()));
+        let addedCount = 0;
+
+        for (const raw of namesArray) {
+            const trimmed = String(raw).trim().slice(0, 60);
+            if (trimmed && !seen.has(trimmed.toLowerCase())) {
+                seen.add(trimmed.toLowerCase());
+                currentCandidates.push(trimmed);
+                addedCount++;
+            }
+        }
+
+        renderChipsDeck();
+        return addedCount;
+    }
 
     function openNewModal() {
         document.getElementById('input-person').value = '';
+        currentCandidates = [];
+        isBulkEditMode = false;
+        document.getElementById('chips-deck-container')?.classList.remove('hidden');
+        document.getElementById('quick-add-container')?.classList.remove('hidden');
+        document.getElementById('input-names')?.classList.add('hidden');
+        const bulkLabel = document.getElementById('bulk-toggle-label');
+        if (bulkLabel) bulkLabel.textContent = BNR_I18N.t('bulkEdit');
         setCategory(selectedCat || 'Girls');
-        document.getElementById('input-names').value = '';
-        updateNamesCount();
+        renderChipsDeck();
         modalNew.showModal();
         document.getElementById('input-person').focus();
     }
@@ -67,6 +179,72 @@
     document.getElementById('new-session-btn').addEventListener('click', openNewModal);
     document.getElementById('hero-new-btn').addEventListener('click', openNewModal);
     document.getElementById('modal-close').addEventListener('click', () => modalNew.close());
+
+    // Quick Add Input (Enter key or Add button)
+    const quickInput = document.getElementById('input-quick-add');
+    const quickAddBtn = document.getElementById('btn-quick-add');
+
+    function handleQuickAdd() {
+        if (!quickInput) return;
+        const val = quickInput.value.trim();
+        if (!val) return;
+
+        const names = val.split(/[\n,]+/).map(n => n.trim()).filter(Boolean);
+        addCandidateNames(names);
+        quickInput.value = '';
+        quickInput.focus();
+    }
+
+    if (quickInput) {
+        quickInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleQuickAdd();
+            }
+        });
+        quickInput.addEventListener('paste', () => {
+            setTimeout(handleQuickAdd, 50);
+        });
+    }
+
+    if (quickAddBtn) {
+        quickAddBtn.addEventListener('click', handleQuickAdd);
+    }
+
+    // Toggle Bulk Edit Mode
+    const toggleBulkBtn = document.getElementById('toggle-bulk-mode');
+    const bulkToggleLabel = document.getElementById('bulk-toggle-label');
+    const chipsDeck = document.getElementById('chips-deck-container');
+    const quickAddDeck = document.getElementById('quick-add-container');
+    const namesTextarea = document.getElementById('input-names');
+
+    if (toggleBulkBtn) {
+        toggleBulkBtn.addEventListener('click', () => {
+            isBulkEditMode = !isBulkEditMode;
+            if (isBulkEditMode) {
+                syncTextareaFromCandidates();
+                chipsDeck?.classList.add('hidden');
+                quickAddDeck?.classList.add('hidden');
+                namesTextarea?.classList.remove('hidden');
+                if (bulkToggleLabel) bulkToggleLabel.textContent = '✓ Done';
+                namesTextarea?.focus();
+            } else {
+                syncCandidatesFromTextarea();
+                namesTextarea?.classList.add('hidden');
+                chipsDeck?.classList.remove('hidden');
+                quickAddDeck?.classList.remove('hidden');
+                if (bulkToggleLabel) bulkToggleLabel.textContent = BNR_I18N.t('bulkEdit');
+                renderChipsDeck();
+            }
+        });
+    }
+
+    if (namesTextarea) {
+        namesTextarea.addEventListener('input', () => {
+            syncCandidatesFromTextarea();
+            updateNamesCount();
+        });
+    }
 
     function setCategory(cat) {
         selectedCat = ['Girls', 'Boys', 'Unisex'].includes(cat) ? cat : 'Girls';
@@ -79,7 +257,6 @@
             }
         });
 
-        // Hide "include unisex" controls when Unisex category is already selected
         const unisexContainer = document.getElementById('include-unisex-container');
         const unisexQuickBtn = document.getElementById('btn-add-unisex-quick');
         if (unisexContainer) {
@@ -88,17 +265,17 @@
         if (unisexQuickBtn) {
             unisexQuickBtn.classList.toggle('hidden', selectedCat === 'Unisex');
         }
+
+        renderSuggestionsShelf();
     }
 
     document.querySelectorAll('.cat-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             setCategory(btn.dataset.cat);
-            // Retain existing names so users can combine Girls/Boys with Unisex!
-            updateNamesCount();
         });
     });
 
-    // Count Size Selector (Top 50, 100, 150, 200)
+    // Preset Count Selector (50, 100, 150, 200)
     let selectedPresetCount = 50;
     document.querySelectorAll('.count-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -113,25 +290,7 @@
         });
     });
 
-    function appendNamesToTextarea(namesToAdd, btnElement) {
-        const ta = document.getElementById('input-names');
-        const currentNames = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
-        const newSet = new Set(currentNames);
-        namesToAdd.forEach(name => {
-            if (name && name.trim()) newSet.add(name.trim());
-        });
-        ta.value = Array.from(newSet).join('\n');
-        updateNamesCount();
-
-        if (btnElement) {
-            btnElement.classList.add('bg-stone-200', 'border-stone-400');
-            setTimeout(() => {
-                btnElement.classList.remove('bg-stone-200', 'border-stone-400');
-            }, 150);
-        }
-    }
-
-    // Cultural Appenders (Supports combining Girls/Boys with Unisex)
+    // Cultural Appenders
     document.querySelectorAll('.culture-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const culture = btn.dataset.culture;
@@ -146,7 +305,10 @@
                 namesToAdd.push(...unisexPack);
             }
             
-            appendNamesToTextarea(namesToAdd, btn);
+            addCandidateNames(namesToAdd);
+
+            btn.classList.add('bg-stone-200', 'border-stone-400');
+            setTimeout(() => btn.classList.remove('bg-stone-200', 'border-stone-400'), 150);
         });
     });
 
@@ -160,75 +322,30 @@
             const langToCulture = { nl: 'Dutch', ar: 'Arabic', en: 'English', fr: 'French', es: 'Spanish', de: 'Nordic' };
             const culture = langToCulture[lang] || 'Dutch';
             const unisexPack = (BNR.STARTER_PACKS[culture]?.['Unisex'] || []).slice(0, selectedPresetCount);
-            appendNamesToTextarea(unisexPack, btnAddUnisexQuick);
+            addCandidateNames(unisexPack);
+
+            btnAddUnisexQuick.classList.add('bg-stone-200');
+            setTimeout(() => btnAddUnisexQuick.classList.remove('bg-stone-200'), 150);
         });
     }
 
     document.getElementById('pack-clear').addEventListener('click', () => {
-        document.getElementById('input-names').value = '';
-        document.getElementById('suggestions-box').classList.add('hidden');
-        updateNamesCount();
+        currentCandidates = [];
+        renderChipsDeck();
     });
 
     document.getElementById('modal-sort-az').addEventListener('click', () => {
-        const ta = document.getElementById('input-names');
-        const names = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
-        names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-        ta.value = names.join('\n');
-        updateNamesCount();
+        currentCandidates.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        renderChipsDeck();
     });
 
-    // Find Variations in Modal
-    document.getElementById('modal-find-similar').addEventListener('click', () => {
-        const ta = document.getElementById('input-names');
-        const currentNames = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
-        const box = document.getElementById('suggestions-box');
-        const chipsContainer = document.getElementById('suggestions-chips');
-
-        if (currentNames.length === 0) {
-            toast(BNR_I18N.t('minNamesAlert'));
-            return;
-        }
-
-        const variations = BNR.findSimilarForList(currentNames, { limit: 10, category: selectedCat });
-        if (variations.length === 0) {
-            toast(BNR_I18N.t('noVariationsFound'));
-            box.classList.add('hidden');
-            return;
-        }
-
-        chipsContainer.innerHTML = '';
-        variations.forEach(item => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'inline-flex items-center gap-1 bg-white hover:bg-stone-200 border border-stone-300 px-2.5 py-1 rounded-lg text-xs font-medium text-stone-800 transition-all active:scale-95 shadow-sm';
-            btn.innerHTML = `<span>+ ${BNR.escapeHtml(item.name)}</span> <span class="text-[10px] text-stone-400 font-normal">(${BNR.escapeHtml(item.basedOn)})</span>`;
-            
-            btn.addEventListener('click', () => {
-                let list = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
-                if (!list.includes(item.name)) {
-                    list.push(item.name);
-                    ta.value = list.join('\n');
-                    updateNamesCount();
-                }
-                btn.classList.add('opacity-40', 'pointer-events-none', 'line-through');
-            });
-            chipsContainer.appendChild(btn);
-        });
-
-        box.classList.remove('hidden');
-        toast(BNR_I18N.t('variationsFound', { count: variations.length }));
-    });
-
-    document.getElementById('close-suggestions').addEventListener('click', () => {
-        document.getElementById('suggestions-box').classList.add('hidden');
-    });
-
+    // Form Submit
     document.getElementById('form-new-session').addEventListener('submit', () => {
+        if (isBulkEditMode) {
+            syncCandidatesFromTextarea();
+        }
         const person = document.getElementById('input-person').value.trim();
-        const rawNames = document.getElementById('input-names').value
-            .split('\n').map(n => n.trim()).filter(Boolean);
-        const names = [...new Set(rawNames)];
+        const names = [...currentCandidates];
 
         if (!person) { toast(BNR_I18N.t('personRequiredAlert')); return; }
         if (names.length < 2) { toast(BNR_I18N.t('minNamesAlert')); return; }
