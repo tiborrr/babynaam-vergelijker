@@ -30,6 +30,9 @@ jobs:
         with:
           node-version: 20
 
+      - name: Validate Translations & Lint Dictionary
+        run: node validate-translations.js
+
       - name: Run Test Suite
         run: node test-suite.js
 

@@ -13,6 +13,10 @@ PUBLIC_DIR="${REMOTE_DIR}/public"
 
 SSH_OPTS="ssh -o RemoteCommand=none -o RequestTTY=no"
 
+echo "🧪 Running Automated Translation & Logic Audit..."
+node validate-translations.js
+node test-suite.js
+
 echo "🚀 Deploying Baby Name Ranker to https://baby.casteleijn.com ..."
 
 # 1. Ensure remote directories exist

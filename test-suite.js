@@ -320,6 +320,8 @@ function testCompareLogic() {
     BNR_I18N.setLanguage('nl');
     assert(BNR_I18N.t('appTitle') === 'Babynaam Vergelijker', 'Translates static keys into Dutch');
     assert(BNR_I18N.t('roundBadge', { round: 3 }) === 'Ronde 3', 'Interpolates dynamic parameters in Dutch');
+    assert(BNR_I18N.t('variationsModalTitle', { name: 'Isa' }) === 'Vergelijkbare Variaties van "Isa"', 'Translates variationsModalTitle in Dutch with interpolation');
+    assert(BNR_I18N.t('startRerankWithVariations', { round: 2, count: 6 }) === 'Start Ronde 2 met 6 Namen →', 'Translates startRerankWithVariations in Dutch');
 
     BNR_I18N.setLanguage('fr');
     assert(BNR_I18N.t('appTitle') === 'Comparateur de Prénoms', 'Translates static keys into French');
@@ -336,6 +338,7 @@ function testCompareLogic() {
     // Reset back to English
     BNR_I18N.setLanguage('en');
     assert(BNR_I18N.t('appTitle') === 'Baby Name Ranker', 'Resets back to English');
+    assert(BNR_I18N.t('variationsModalTitle', { name: 'Isa' }) === 'Similar Variations of "Isa"', 'Translates variationsModalTitle in English');
 
     // ── Test 8: SEO & Structural Requirements ─────────────────────────────
     console.log('\nTest Suite 8: SEO & Semantic Requirements');
