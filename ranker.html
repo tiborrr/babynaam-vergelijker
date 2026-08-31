@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking — Baby Name Ranker</title>
+    <meta name="description" content="A pairwise ranking tool for couples to compare and agree on baby names.">
+    <link rel="canonical" href="https://baby.casteleijn.com/ranker.html">
+    <meta name="robots" content="noindex, follow"> <!-- Internal tool page, don't index directly in SERPs to avoid duplicate content, index the homepage instead -->
+    
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#FAF8F5">
+    <!-- Google Fonts: Newsreader & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
+    <script src="storage.js"></script>
+    <script src="i18n.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        serif: ['"Newsreader"', 'Georgia', 'serif'],
+                    },
+                    colors: {
+                        stone: {
+                            50: '#FAF8F5',
+                            100: '#F4EFEA',
+                            200: '#E7DFD5',
+                            300: '#D5C9BC',
+                            400: '#A89B8C',
+                            500: '#7D7063',
+                            600: '#5A5046',
+                            700: '#3F3730',
+                            800: '#2A241F',
+                            900: '#1C1815'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @view-transition {
+            navigation: auto;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #FAF8F5;
+            color: #1C1815;
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+</head>
+<body class="selection:bg-stone-200 selection:text-stone-900 min-h-screen">
+
+<!-- Toast Notification -->
+<div id="toast" role="status" aria-live="polite" class="fixed top-5 right-5 z-[100] opacity-0 pointer-events-none transition-all duration-300 translate-y-[-8px] bg-stone-900 text-stone-100 text-xs sm:text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg border border-stone-800 backdrop-blur-md flex items-center gap-2"></div>
+
+<!-- ── Comparison Mini-Game State ────────────────────────────── -->
+<div id="comparison-state" role="region" aria-label="Name Comparison Arena" class="hidden min-h-screen p-4 sm:p-6 max-w-lg mx-auto flex flex-col justify-between">
+    
+    <!-- Top Bar -->
+    <div class="pt-2 sm:pt-4">
+        <div class="flex items-center justify-between mb-6 gap-2">
+            <a href="./" class="inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-stone-900 bg-white px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all">
+                <span>←</span> <span data-i18n="dashboard">Dashboard</span>
+            </a>
+            <div id="lang-switcher-ranker"></div>
+            <button id="undo-btn" class="hidden inline-flex items-center gap-1 text-xs font-medium text-stone-600 hover:text-stone-900 bg-white px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all hover:bg-stone-50 active:scale-95">
+                <span>↩</span> <span data-i18n="undoChoice">Undo Choice</span>
+            </button>
+        </div>
+
+        <div class="text-center">
+            <div id="session-badge" class="inline-block text-[10px] font-semibold uppercase tracking-widest text-stone-500 bg-stone-100 px-3 py-1 rounded-md mb-2">
+                Ranking Session
+            </div>
+            <h2 data-i18n="whichDoYouPrefer" class="font-serif italic text-2xl sm:text-3xl text-stone-900 tracking-tight">Which name do you prefer?</h2>
+            <p class="text-xs text-stone-400 mt-1">Select your instinctive preference</p>
+        </div>
+    </div>
+
+    <!-- Match Cards Arena -->
+    <div class="my-auto flex flex-col gap-3.5 py-6 relative" aria-live="polite">
+        <!-- Card A -->
+        <button id="btn-a" class="w-full bg-white hover:bg-stone-50 text-stone-900 border border-stone-200/90 hover:border-stone-400 py-12 sm:py-14 px-6 rounded-2xl shadow-[0_2px_12px_-2px_rgba(40,30,20,0.03)] hover:shadow-md active:scale-[0.99] transition-all outline-none focus:ring-2 focus:ring-stone-900 break-words group flex flex-col items-center justify-center relative">
+            <span class="text-[10px] font-semibold text-stone-400 uppercase tracking-widest mb-1.5 group-hover:text-stone-600 transition-colors">Choice 1</span>
+            <span id="btn-a-name" class="font-serif text-3xl sm:text-4xl text-stone-900 tracking-tight font-normal">...</span>
+        </button>
+
+        <!-- Divider -->
+        <div class="flex items-center justify-center my-[-14px] z-10 relative">
+            <div class="bg-white px-3 py-1 rounded-full text-[10px] font-semibold text-stone-400 border border-stone-200 shadow-sm uppercase tracking-widest">
+                or
+            </div>
+        </div>
+
+        <!-- Card B -->
+        <button id="btn-b" class="w-full bg-white hover:bg-stone-50 text-stone-900 border border-stone-200/90 hover:border-stone-400 py-12 sm:py-14 px-6 rounded-2xl shadow-[0_2px_12px_-2px_rgba(40,30,20,0.03)] hover:shadow-md active:scale-[0.99] transition-all outline-none focus:ring-2 focus:ring-stone-900 break-words group flex flex-col items-center justify-center relative">
+            <span class="text-[10px] font-semibold text-stone-400 uppercase tracking-widest mb-1.5 group-hover:text-stone-600 transition-colors">Choice 2</span>
+            <span id="btn-b-name" class="font-serif text-3xl sm:text-4xl text-stone-900 tracking-tight font-normal">...</span>
+        </button>
+    </div>
+
+    <!-- Progress & Controls -->
+    <div class="pb-6">
+        <div class="bg-white p-3.5 rounded-xl border border-stone-200/70 shadow-sm mb-3">
+            <div class="flex justify-between items-center text-xs text-stone-500 mb-2">
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-400">Progress</span>
+                <span id="progress-text" class="text-stone-600 font-mono text-xs">0 of ~0</span>
+            </div>
+            <div class="w-full bg-stone-100 rounded-full h-1.5 overflow-hidden">
+                <div id="progress-bar" class="bg-stone-900 h-full rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div data-i18n="keyboardHint" class="text-center text-stone-400 text-xs font-normal">
+            Press 1 or 2 to choose · Space to undo
+        </div>
+    </div>
+</div>
+
+<!-- ── Results State ─────────────────────────────────── -->
+<div id="results-state" role="region" aria-label="Ranking Results" class="hidden min-h-screen p-4 sm:p-6 max-w-lg mx-auto flex flex-col pb-36">
+
+    <div class="mt-2 mb-6 flex items-center justify-between gap-2">
+        <a href="./" class="inline-flex items-center gap-1 text-xs font-medium text-stone-600 hover:text-stone-900 bg-white px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all">
+            <span>←</span> <span data-i18n="dashboard">Dashboard</span>
+        </a>
+        <div class="flex items-center gap-2">
+            <div id="lang-switcher-results"></div>
+            <button id="copy-rank-btn" class="bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                <span data-i18n="shareRankingsBtn">Share / Copy</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Celebration Header -->
+    <div class="mb-6 bg-white p-6 rounded-2xl border border-stone-200/80 shadow-[0_2px_8px_-2px_rgba(40,30,20,0.03)]">
+        <span data-i18n="resultsComplete" class="text-[10px] font-semibold uppercase tracking-widest text-stone-400 block mb-1">Results Complete</span>
+        <h1 id="results-heading" class="font-serif italic text-2xl sm:text-3xl text-stone-900 tracking-tight">Your Ranked Favorites</h1>
+        <p id="results-subheading" data-i18n="rankedFavoritesSub" class="text-stone-500 text-xs mt-1">
+            Review your final order or remove names you wish to discard.
+        </p>
+    </div>
+
+    <!-- Ranked List Cards -->
+    <div class="bg-white rounded-2xl shadow-sm border border-stone-200/80 overflow-hidden mb-6">
+        <ul id="results-list" class="divide-y divide-stone-100"></ul>
+    </div>
+
+    <!-- Deleted Names Bin -->
+    <div id="deleted-section" class="hidden bg-stone-100/70 rounded-2xl p-4 border border-stone-200/80 mb-6">
+        <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 flex items-center gap-1">
+                <span data-i18n="removedNamesTitle">Removed Names</span>
+                <span id="deleted-count" class="text-stone-400 font-normal ml-0.5"></span>
+            </h3>
+            <button id="restore-all-btn" data-i18n="restoreAll" class="text-xs font-medium text-stone-600 hover:text-stone-900 hover:underline">Restore All</button>
+        </div>
+        <div id="deleted-chips" class="flex flex-wrap gap-1.5"></div>
+    </div>
+
+    <!-- Floating Sticky Bottom Actions -->
+    <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#FAF8F5] via-[#FAF8F5]/95 to-transparent flex justify-center z-40">
+        <div class="w-full max-w-lg flex gap-2.5">
+            <button id="rerank-btn" class="flex-1 bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium py-3 rounded-xl shadow-md active:scale-[0.99] transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5">
+                <span data-i18n="rerankRemainingBtn">Re-rank Remaining Favorites →</span>
+            </button>
+            <a href="./" data-i18n="dashboard" class="bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 font-medium py-3 px-5 rounded-xl shadow-sm active:scale-[0.99] transition-all text-xs sm:text-sm text-center flex items-center justify-center">
+                Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ── Error State ───────────────────────────────────── -->
+<div id="error-state" class="hidden min-h-screen flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">
+    <div class="w-12 h-12 rounded-2xl bg-stone-100 border border-stone-200/80 flex items-center justify-center text-stone-400 mb-4 text-sm font-serif italic">404</div>
+    <h1 data-i18n="sessionNotFoundTitle" class="font-serif italic text-2xl text-stone-900 mb-1 tracking-tight">Session not found</h1>
+    <p data-i18n="sessionNotFoundSub" class="text-stone-500 mb-6 text-xs sm:text-sm">This session may have been deleted or the link is invalid.</p>
+    <a href="./" data-i18n="backToDashboard" class="bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium px-5 py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-sm">← Back to Dashboard</a>
+</div>
+
+<script>
+    // ── Mount Language Switchers ───────────────────────────
+    function mountLanguageSwitchers() {
+        if (window.BNR_I18N) {
+            const html = BNR_I18N.renderLanguageSwitcher();
+            const r = document.getElementById('lang-switcher-ranker');
+            const res = document.getElementById('lang-switcher-results');
+            if (r) r.innerHTML = html;
+            if (res) res.innerHTML = html;
+        }
+    }
+    mountLanguageSwitchers();
+
+    // ── Bootstrap ─────────────────────────────────────────
+    const params = new URLSearchParams(location.search);
+    const sessionId = params.get('session');
+
+    let session = sessionId ? BNR.getSession(sessionId) : null;
+
+    if (!session) {
+        document.getElementById('error-state').classList.remove('hidden');
+        throw new Error('Session not found: ' + sessionId);
+    }
+
+    function updateHeaderLabels() {
+        const catTranslated = BNR_I18N.t('cat' + session.category);
+        const roundText = session.round > 1 ? ` · ${BNR_I18N.t('roundBadge', { round: session.round })}` : '';
+        const badge = document.getElementById('session-badge');
+        badge.textContent = `${session.person} · ${catTranslated}${roundText}`;
+
+        document.getElementById('results-heading').textContent = `${session.person}'s ${catTranslated}`;
+    }
+
+    updateHeaderLabels();
+
+    window.addEventListener('bnr:languagechange', () => {
+        updateHeaderLabels();
+        mountLanguageSwitchers();
+        if (session.status === 'ranked') {
+            renderResults();
+        }
+    });
+
+    // ── Toast helper ──────────────────────────────────────
+    function toast(msg, duration = 2400) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.remove('opacity-0', 'translate-y-[-10px]', 'pointer-events-none');
+        el.classList.add('opacity-100', 'translate-y-0');
+        clearTimeout(el._timer);
+        el._timer = setTimeout(() => {
+            el.classList.add('opacity-0', 'translate-y-[-10px]', 'pointer-events-none');
+            el.classList.remove('opacity-100', 'translate-y-0');
+        }, duration);
+    }
+
+    // ── Ranking Engine with Undo Support ──────────────────
+    let resolveClick = null;
+    let comparisonsMade = 0;
+    let estimatedTotal = 0;
+    let choiceHistory = [];
+    let initialShuffled = null;
+
+    function calcMaxComparisons(len) {
+        if (len <= 1) return 0;
+        const mid = Math.floor(len / 2);
+        return calcMaxComparisons(mid) + calcMaxComparisons(len - mid) + (len - 1);
+    }
+
+    function updateProgress() {
+        const pct = Math.min((comparisonsMade / Math.max(estimatedTotal, 1)) * 100, 100);
+        document.getElementById('progress-text').textContent = BNR_I18N.t('comparisonProgress', {
+            current: comparisonsMade,
+            total: estimatedTotal
+        }) + ` (${Math.round(pct)}%)`;
+        document.getElementById('progress-bar').style.width = `${pct}%`;
+
+        const undoBtn = document.getElementById('undo-btn');
+        if (choiceHistory.length > 0) {
+            undoBtn.classList.remove('hidden');
+        } else {
+            undoBtn.classList.add('hidden');
+        }
+    }
+
+    function handleChoice(preference) {
+        if (!resolveClick) return;
+        choiceHistory.push(preference);
+        const resolve = resolveClick;
+        resolveClick = null;
+        comparisonsMade++;
+        updateProgress();
+        resolve(preference);
+    }
+
+    document.getElementById('btn-a').addEventListener('click', () => handleChoice(-1));
+    document.getElementById('btn-b').addEventListener('click', () => handleChoice(1));
+
+    document.addEventListener('keydown', (e) => {
+        if (document.getElementById('comparison-state').classList.contains('hidden') || !resolveClick) return;
+        if (['ArrowLeft', 'ArrowUp', '1'].includes(e.key)) handleChoice(-1);
+        if (['ArrowRight', 'ArrowDown', '2'].includes(e.key)) handleChoice(1);
+    });
+
+    // Undo functionality
+    document.getElementById('undo-btn').addEventListener('click', () => {
+        if (choiceHistory.length === 0) return;
+        choiceHistory.pop(); // remove last decision
+        runMergeSortFromHistory();
+        toast('↩ Undid choice');
+    });
+
+    async function mergeSort(arr, compareFn) {
+        if (arr.length <= 1) return arr;
+        const mid = Math.floor(arr.length / 2);
+        const left = await mergeSort(arr.slice(0, mid), compareFn);
+        const right = await mergeSort(arr.slice(mid), compareFn);
+        return merge(left, right, compareFn);
+    }
+
+    async function merge(left, right, compareFn) {
+        const result = [];
+        let i = 0, j = 0;
+        while (i < left.length && j < right.length) {
+            const cmp = await compareFn(left[i], right[j]);
+            if (cmp <= 0) { result.push(left[i++]); }
+            else { result.push(right[j++]); }
+        }
+        return result.concat(left.slice(i)).concat(right.slice(j));
+    }
+
+    async function runMergeSortFromHistory() {
+        comparisonsMade = 0;
+        let playbackIndex = 0;
+
+        const btnAName = document.getElementById('btn-a-name');
+        const btnBName = document.getElementById('btn-b-name');
+
+        const sorted = await mergeSort([...initialShuffled], async (a, b) => {
+            if (playbackIndex < choiceHistory.length) {
+                // Replay historical choice
+                const recordedChoice = choiceHistory[playbackIndex++];
+                comparisonsMade++;
+                return recordedChoice;
+            }
+
+            // Interactive prompt for new choice
+            btnAName.textContent = a;
+            btnBName.textContent = b;
+            updateProgress();
+
+            return new Promise(resolve => { resolveClick = resolve; });
+        });
+
+        // Persist result and show results
+        session.ranking = sorted;
+        session.status = 'ranked';
+        BNR.saveSession(session);
+
+        document.getElementById('comparison-state').classList.add('hidden');
+        showResults(true);
+    }
+
+    async function startRanking() {
+        // Shuffle to remove input bias
+        const arr = [...session.names];
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        initialShuffled = arr;
+        estimatedTotal = calcMaxComparisons(arr.length);
+        choiceHistory = [];
+
+        document.getElementById('comparison-state').classList.remove('hidden');
+        updateProgress();
+
+        await runMergeSortFromHistory();
+    }
+
+    // ── Results ───────────────────────────────────────────
+    function persist() {
+        BNR.saveSession(session);
+    }
+
+    function deleteName(name) {
+        if (!session.deleted.includes(name)) {
+            session.deleted.push(name);
+            persist();
+            renderResults();
+            toast(`Removed "${name}"`);
+        }
+    }
+
+    function restoreName(name) {
+        session.deleted = session.deleted.filter(n => n !== name);
+        persist();
+        renderResults();
+        toast(`Restored "${name}"`);
+    }
+
+    document.getElementById('restore-all-btn').addEventListener('click', () => {
+        session.deleted = [];
+        persist();
+        renderResults();
+        toast(BNR_I18N.t('restoreAll'));
+    });
+
+    // Event delegation for deleting and restoring names
+    document.getElementById('results-list').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action="delete"]');
+        if (btn && btn.dataset.name) {
+            deleteName(btn.dataset.name);
+        }
+    });
+
+    document.getElementById('deleted-chips').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action="restore"]');
+        if (btn && btn.dataset.name) {
+            restoreName(btn.dataset.name);
+        }
+    });
+
+    document.getElementById('copy-rank-btn').addEventListener('click', async () => {
+        const activeList = session.ranking.filter(n => !session.deleted.includes(n));
+        if (!activeList.length) return;
+        const text = `${session.person}'s ${BNR_I18N.t('appTitle')}:\n` + activeList.map((n, i) => `${i + 1}. ${n}`).join('\n');
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `${session.person}'s Baby Names`,
+                    text: text
+                });
+                toast(BNR_I18N.t('copiedSuccess'));
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+            }
+        }
+        navigator.clipboard.writeText(text).then(() => toast(BNR_I18N.t('copiedSuccess')));
+    });
+
+    document.getElementById('rerank-btn').addEventListener('click', () => {
+        const active = session.ranking.filter(n => !session.deleted.includes(n));
+        if (active.length < 2) { toast(BNR_I18N.t('minNamesAlert')); return; }
+        if (!confirm(`Start Round ${session.round + 1} with ${active.length} names?`)) return;
+        const child = BNR.createReRankSession(session);
+        if (!child) return;
+        BNR.saveSession(child);
+        window.location.href = `ranker.html?session=${encodeURIComponent(child.id)}`;
+    });
+
+    function renderResults() {
+        const list = document.getElementById('results-list');
+        list.innerHTML = '';
+
+        const activeNames = session.ranking.filter(n => !session.deleted.includes(n));
+
+        activeNames.forEach((name, index) => {
+            const li = document.createElement('li');
+            li.className = 'flex items-center justify-between p-3.5 sm:p-4 hover:bg-stone-50 transition-colors';
+
+            const rankNumber = String(index + 1).padStart(2, '0');
+            const isTop3 = index < 3;
+            const rankClass = isTop3
+                ? 'flex-shrink-0 w-8 h-8 flex items-center justify-center bg-stone-900 text-stone-50 rounded-lg font-mono text-xs font-semibold mr-3.5'
+                : 'flex-shrink-0 w-8 h-8 flex items-center justify-center bg-stone-100 text-stone-500 rounded-lg font-mono text-xs font-semibold mr-3.5';
+
+            const escapedName = BNR.escapeHtml(name);
+
+            li.innerHTML = `
+                <div class="flex items-center min-w-0">
+                    <span class="${rankClass}">${rankNumber}</span>
+                    <span class="font-serif text-lg sm:text-xl font-normal text-stone-900 truncate tracking-tight">${escapedName}</span>
+                </div>
+                <button data-action="delete" data-name="${escapedName}" class="ml-2 flex-shrink-0 text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors" title="Delete ${escapedName}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            `;
+            list.appendChild(li);
+        });
+
+        // Deleted bin
+        const deletedSection = document.getElementById('deleted-section');
+        const deletedChips = document.getElementById('deleted-chips');
+        const deletedCount = document.getElementById('deleted-count');
+
+        if (session.deleted.length > 0) {
+            deletedSection.classList.remove('hidden');
+            deletedCount.textContent = `(${session.deleted.length})`;
+            deletedChips.innerHTML = '';
+            session.deleted.forEach(name => {
+                const escapedName = BNR.escapeHtml(name);
+                const chip = document.createElement('div');
+                chip.className = 'inline-flex items-center gap-1.5 bg-white border border-stone-200 px-2.5 py-1 rounded-lg text-xs font-medium shadow-sm';
+                chip.innerHTML = `
+                    <span class="line-through text-stone-400 font-serif">${escapedName}</span>
+                    <button data-action="restore" data-name="${escapedName}" class="text-stone-700 hover:text-stone-900 ml-1 font-sans text-[11px] underline">${BNR_I18N.t('restore')}</button>
+                `;
+                deletedChips.appendChild(chip);
+            });
+        } else {
+            deletedSection.classList.add('hidden');
+        }
+    }
+
+    function showResults(triggerConfetti = false) {
+        document.getElementById('results-state').classList.remove('hidden');
+        renderResults();
+        window.scrollTo(0, 0);
+
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (triggerConfetti && typeof confetti === 'function' && !prefersReducedMotion) {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+    }
+
+    // ── Entry Point ───────────────────────────────────────
+    if (session.status === 'ranked') {
+        showResults(false);
+    } else {
+        startRanking();
+    }
+</script>
+</body>
+</html>

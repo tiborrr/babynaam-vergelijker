@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baby Name Ranker — Pairwise Name Decision Tool for Couples</title>
+    <meta name="description" content="A pairwise ranking tool for couples to compare and agree on baby names. Find the perfect name without the arguments using head-to-head duels.">
+    <meta name="keywords" content="baby name ranker, babynaam vergelijker, baby names for couples, pairwise baby name tool, name consensus">
+    <link rel="canonical" href="https://baby.casteleijn.com/">
+    
+    <!-- Multi-lingual indexing -->
+    <link rel="alternate" hreflang="en" href="https://baby.casteleijn.com/">
+    <link rel="alternate" hreflang="nl" href="https://baby.casteleijn.com/">
+    <link rel="alternate" hreflang="fr" href="https://baby.casteleijn.com/">
+    <link rel="alternate" hreflang="es" href="https://baby.casteleijn.com/">
+    <link rel="alternate" hreflang="de" href="https://baby.casteleijn.com/">
+    <link rel="alternate" hreflang="ar" href="https://baby.casteleijn.com/">
+    <link rel="alternate" hreflang="x-default" href="https://baby.casteleijn.com/">
+
+    <!-- Icons & Manifest -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#FAF8F5">
+
+    <!-- OpenGraph / Facebook / WhatsApp -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://baby.casteleijn.com/">
+    <meta property="og:title" content="Baby Name Ranker — Find Consensus">
+    <meta property="og:description" content="A pairwise ranking tool for couples to compare and agree on baby names.">
+    <meta property="og:image" content="https://baby.casteleijn.com/og-image.jpg">
+    <meta property="og:site_name" content="Baby Name Ranker">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://baby.casteleijn.com/">
+    <meta name="twitter:title" content="Baby Name Ranker — Find Consensus">
+    <meta name="twitter:description" content="A pairwise ranking tool for couples to compare and agree on baby names.">
+    <meta name="twitter:image" content="https://baby.casteleijn.com/og-image.jpg">
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Baby Name Ranker",
+      "url": "https://baby.casteleijn.com",
+      "description": "A pairwise comparison application for couples to rank and agree on baby names without arguing.",
+      "applicationCategory": "LifestyleApplication",
+      "operatingSystem": "All",
+      "offers": {
+        "@type": "Offer",
+        "price": "0.00",
+        "priceCurrency": "USD"
+      },
+      "inLanguage": ["en", "nl", "fr", "es", "de", "ar"]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [{
+        "@type": "Question",
+        "name": "How do couples choose a baby name without arguing?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "By using a pairwise comparison tool, each partner evaluates names head-to-head in a private ranking session. Once both are finished, the app calculates the mathematical consensus, revealing the mutual top choices."
+        }
+      }, {
+        "@type": "Question",
+        "name": "How does the pairwise comparison algorithm work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Baby Name Ranker uses a merge-sort algorithm under the hood. It asks you to pick between two names at a time, efficiently building a complete top-to-bottom ranked list."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Is our baby name data private?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, completely private. The app runs 100% in your browser using local storage. No data is sent to a server."
+        }
+      }]
+    }
+    </script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
+    <script src="storage.js"></script>
+    <script src="i18n.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        serif: ['"Newsreader"', 'Georgia', 'serif'],
+                    },
+                    colors: {
+                        stone: {
+                            50: '#FAF8F5',
+                            100: '#F4EFEA',
+                            200: '#E7DFD5',
+                            300: '#D5C9BC',
+                            400: '#A89B8C',
+                            500: '#7D7063',
+                            600: '#5A5046',
+                            700: '#3F3730',
+                            800: '#2A241F',
+                            900: '#1C1815'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @view-transition { navigation: auto; }
+        
+        body {
+            background-color: #FAF8F5;
+            color: #1C1815;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Modern top-layer dialog transitions with @starting-style */
+        dialog {
+            opacity: 0;
+            transform: scale(0.97) translateY(6px);
+            transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                        display 0.22s allow-discrete,
+                        overlay 0.22s allow-discrete;
+        }
+        dialog[open] {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+        @starting-style {
+            dialog[open] {
+                opacity: 0;
+                transform: scale(0.97) translateY(6px);
+            }
+        }
+        dialog::backdrop {
+            background-color: rgba(28, 24, 21, 0);
+            backdrop-filter: blur(0px);
+            transition: background-color 0.22s ease-out,
+                        backdrop-filter 0.22s ease-out,
+                        display 0.22s allow-discrete,
+                        overlay 0.22s allow-discrete;
+        }
+        dialog[open]::backdrop {
+            background-color: rgba(28, 24, 21, 0.35);
+            backdrop-filter: blur(4px);
+        }
+        @starting-style {
+            dialog[open]::backdrop {
+                background-color: rgba(28, 24, 21, 0);
+                backdrop-filter: blur(0px);
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            dialog, dialog::backdrop {
+                transform: none !important;
+                transition-duration: 0.01ms !important;
+            }
+            .fade-up, .hero-card { animation: none !important; opacity: 1 !important; transform: none !important; }
+        }
+
+        /* Staggered fade-up on load */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up {
+            opacity: 0;
+            animation: fadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .fade-up-d1 { animation-delay: 0.06s; }
+        .fade-up-d2 { animation-delay: 0.14s; }
+        .fade-up-d3 { animation-delay: 0.22s; }
+        .fade-up-d4 { animation-delay: 0.32s; }
+        .fade-up-d5 { animation-delay: 0.42s; }
+
+        /* Hero duel floating cards */
+        @keyframes floatLeft {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50%      { transform: translateY(-10px) rotate(-1deg); }
+        }
+        @keyframes floatRight {
+            0%, 100% { transform: translateY(-4px) rotate(2deg); }
+            50%      { transform: translateY(6px) rotate(1deg); }
+        }
+        .hero-card-left  { animation: floatLeft 3.6s ease-in-out infinite; }
+        .hero-card-right { animation: floatRight 3.8s ease-in-out 0.4s infinite; }
+
+        /* Hero pulse glow on the "vs" badge */
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(28,24,21,0.15); }
+            50%      { box-shadow: 0 0 0 10px rgba(28,24,21,0); }
+        }
+        .pulse-glow { animation: pulseGlow 2.4s ease-in-out infinite; }
+
+        /* Bento card hover lift */
+        .bento-card {
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+        }
+        .bento-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px -6px rgba(40,30,20,0.08);
+        }
+    </style>
+</head>
+<body class="min-h-screen selection:bg-stone-200 selection:text-stone-900">
+
+<!-- Toast Notification -->
+<div id="toast" role="status" aria-live="polite" class="fixed top-5 right-5 z-[100] opacity-0 pointer-events-none transition-all duration-300 translate-y-[-8px] bg-stone-900 text-stone-100 text-xs sm:text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg border border-stone-800 backdrop-blur-md flex items-center gap-2"></div>
+
+<!-- New Session Native Dialog -->
+<dialog id="modal-new" class="bg-transparent p-3 sm:p-4 max-w-lg w-full outline-none m-auto">
+    <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-7 flex flex-col gap-5 border border-stone-200/80">
+        <div class="flex items-center justify-between pb-1 border-b border-stone-100">
+            <div>
+                <h2 data-i18n="modalNewTitle" class="font-serif italic text-2xl text-stone-900 tracking-tight">New Ranking Session</h2>
+                <p data-i18n="modalNewSub" class="text-xs text-stone-500 mt-0.5">Curate and rank candidate names head-to-head</p>
+            </div>
+            <button id="modal-close" type="button" aria-label="Close modal" class="w-7 h-7 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center text-lg transition-colors">&times;</button>
+        </div>
+
+        <form id="form-new-session" onsubmit="event.preventDefault();" class="flex flex-col gap-4">
+            <div class="flex flex-col gap-1.5">
+                <label for="input-person" data-i18n="yourNameLabel" class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Your Name</label>
+                <input id="input-person" type="text" data-i18n-attr="placeholder" data-i18n="yourNamePlaceholder" placeholder="e.g. Liset or Tibor" maxlength="50" autocapitalize="words" required class="border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-stone-50/50 transition-all placeholder:text-stone-400">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <span data-i18n="categoryLabel" class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Category</span>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" data-cat="Girls" data-i18n="catGirls" class="cat-btn border border-stone-900 bg-stone-900 text-stone-50 font-medium py-2 rounded-xl text-xs sm:text-sm transition-all shadow-sm">Girls</button>
+                    <button type="button" data-cat="Boys" data-i18n="catBoys" class="cat-btn border border-stone-200 bg-white text-stone-600 font-medium py-2 rounded-xl text-xs sm:text-sm transition-all hover:bg-stone-50">Boys</button>
+                    <button type="button" data-cat="Unisex" data-i18n="catUnisex" class="cat-btn border border-stone-200 bg-white text-stone-600 font-medium py-2 rounded-xl text-xs sm:text-sm transition-all hover:bg-stone-50">Unisex</button>
+                </div>
+            </div>
+
+            <!-- Cultural Preset Appenders -->
+            <div class="flex flex-col gap-2 bg-stone-50 p-3 rounded-xl border border-stone-200/60">
+                <div class="flex items-center justify-between">
+                    <span data-i18n="topListsTitle" class="text-[11px] font-semibold text-stone-600 uppercase tracking-wider">Top 50 Lists</span>
+                    <span data-i18n="topListsSub" class="text-[11px] text-stone-400">Click to append</span>
+                </div>
+                <div id="cultural-pills" class="flex flex-wrap gap-1.5">
+                    <button type="button" data-culture="Dutch" data-i18n="cultureDutch" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                        Dutch
+                    </button>
+                    <button type="button" data-culture="Arabic" data-i18n="cultureArabic" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                        Arabic
+                    </button>
+                    <button type="button" data-culture="English" data-i18n="cultureEnglish" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                        English
+                    </button>
+                    <button type="button" data-culture="French" data-i18n="cultureFrench" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                        French
+                    </button>
+                    <button type="button" data-culture="Spanish" data-i18n="cultureSpanish" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                        Spanish
+                    </button>
+                    <button type="button" data-culture="Nordic" data-i18n="cultureNordic" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                        Nordic
+                    </button>
+                    <button id="pack-clear" data-i18n="clearAll" type="button" class="text-xs bg-stone-200/70 hover:bg-stone-300/70 text-stone-600 font-medium px-2.5 py-1.5 rounded-lg transition-all ml-auto">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <div class="flex items-center justify-between">
+                    <label for="input-names" class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                        <span data-i18n="candidateNamesLabel">Candidate Names</span> <span id="names-count" class="text-stone-700 font-normal lowercase">(0 names)</span>
+                    </label>
+                    <button id="modal-sort-az" data-i18n="sortAZ" type="button" class="text-xs text-stone-600 hover:text-stone-900 font-medium hover:underline">Sort A–Z</button>
+                </div>
+                <textarea id="input-names" data-i18n-attr="placeholder" data-i18n="namesPlaceholder" rows="5" class="border border-stone-200 rounded-xl p-3 text-sm resize-none outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-stone-50/50 font-sans leading-relaxed transition-all placeholder:text-stone-400" placeholder="Enter or paste names (one per line)..."></textarea>
+            </div>
+
+            <button id="modal-start" type="submit" class="w-full bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium py-3 rounded-xl transition-all active:scale-[0.99] text-sm shadow-sm flex items-center justify-center gap-1.5 mt-1">
+                <span data-i18n="startRanking">Start Ranking</span>
+                <span>→</span>
+            </button>
+        </form>
+    </div>
+</dialog>
+
+<!-- Import Native Dialog -->
+<dialog id="modal-import" class="bg-transparent p-3 sm:p-4 max-w-md w-full outline-none m-auto">
+    <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-7 flex flex-col gap-4 border border-stone-200/80">
+        <div class="flex items-center justify-between pb-1 border-b border-stone-100">
+            <div>
+                <h2 data-i18n="modalImportTitle" class="font-serif italic text-2xl text-stone-900 tracking-tight">Import Sessions</h2>
+                <p data-i18n="modalImportSub" class="text-xs text-stone-500 mt-0.5">Load rankings shared by your partner</p>
+            </div>
+            <button id="import-modal-close" type="button" aria-label="Close modal" class="w-7 h-7 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center text-lg transition-colors">&times;</button>
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <button id="import-file-btn" type="button" class="w-full border border-dashed border-stone-300 hover:border-stone-500 bg-stone-50/50 hover:bg-stone-100/50 text-stone-700 rounded-xl py-4 text-xs sm:text-sm font-medium transition-all flex flex-col items-center gap-1.5">
+                <svg class="w-5 h-5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                <span data-i18n="uploadJsonBtn">Upload JSON file</span>
+            </button>
+
+            <div class="flex items-center gap-3 text-[10px] text-stone-400 font-semibold tracking-wider py-0.5">
+                <div class="flex-1 h-px bg-stone-200"></div><span data-i18n="orPasteLabel">OR PASTE CODE</span><div class="flex-1 h-px bg-stone-200"></div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                    <label for="import-paste-area" data-i18n="sharedJsonLabel" class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Shared JSON</label>
+                    <button id="paste-clipboard-btn" data-i18n="pasteClipboardBtn" type="button" class="text-xs text-stone-600 hover:text-stone-900 hover:underline font-medium">Paste clipboard</button>
+                </div>
+                <textarea id="import-paste-area" data-i18n-attr="placeholder" data-i18n="pastePlaceholder" rows="4" class="border border-stone-200 rounded-xl p-2.5 text-xs font-mono resize-none outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-stone-50/50 placeholder:text-stone-400" placeholder='Paste exported JSON text here...'></textarea>
+                <button id="import-paste-btn" data-i18n="importSessionsBtn" type="button" class="w-full bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium py-2.5 rounded-xl transition-all active:scale-[0.99] text-xs sm:text-sm shadow-sm">
+                    Import Sessions
+                </button>
+            </div>
+        </div>
+    </div>
+</dialog>
+
+<!-- Export Native Dialog -->
+<dialog id="modal-export" class="bg-transparent p-3 sm:p-4 max-w-md w-full outline-none m-auto">
+    <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-7 flex flex-col gap-4 border border-stone-200/80">
+        <div class="flex items-center justify-between pb-1 border-b border-stone-100">
+            <div>
+                <h2 data-i18n="modalExportTitle" class="font-serif italic text-2xl text-stone-900 tracking-tight">Export & Share</h2>
+                <p data-i18n="modalExportSub" class="text-xs text-stone-500 mt-0.5">Share your ranked lists with your partner</p>
+            </div>
+            <button id="export-modal-close" type="button" aria-label="Close modal" class="w-7 h-7 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center text-lg transition-colors">&times;</button>
+        </div>
+
+        <p data-i18n="exportDescription" class="text-xs text-stone-500 leading-relaxed">
+            Your data is stored privately in your browser. Transfer your ranking sessions to your partner's phone or laptop in one tap.
+        </p>
+
+        <div class="flex flex-col gap-2.5">
+            <button id="export-native-share" type="button" class="w-full bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all active:scale-[0.99] flex items-center justify-center gap-2 shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                <span data-i18n="shareNativeBtn">Share via App / WhatsApp</span>
+            </button>
+
+            <button id="export-copy-clipboard" type="button" class="w-full bg-stone-50 hover:bg-stone-100 text-stone-800 border border-stone-200 font-medium py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                <span data-i18n="copyCodeBtn">Copy Share Code</span>
+            </button>
+            
+            <button id="export-download-file" type="button" class="w-full bg-white hover:bg-stone-50 text-stone-600 border border-stone-200 font-medium py-2.5 px-4 rounded-xl text-xs sm:text-sm transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span data-i18n="downloadJsonBtn">Download .JSON File</span>
+            </button>
+        </div>
+    </div>
+</dialog>
+
+<!-- Main App Container -->
+<div class="max-w-2xl mx-auto px-4 sm:px-6 pt-10 pb-32">
+
+    <!-- Top Bar with Brand & Language Switcher -->
+    <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+        <span data-i18n="brandTagline" class="text-[11px] font-semibold uppercase tracking-widest text-stone-400 block">Decision Companion</span>
+        <div id="lang-switcher-mount"></div>
+    </div>
+
+    <!-- Brand Header -->
+    <header class="flex items-center justify-between mb-10 gap-4 flex-wrap pb-6 border-b border-stone-200/60">
+        <div>
+            <h1 data-i18n="appTitle" class="font-serif italic text-3xl sm:text-4xl text-stone-900 tracking-tight">Baby Name Ranker</h1>
+            <p data-i18n="appSubtitle" class="text-stone-500 text-xs sm:text-sm mt-0.5">Head-to-head comparison to find the name you both love.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <button id="import-btn" data-i18n="import" class="bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 font-medium px-3 py-2 rounded-xl text-xs sm:text-sm transition-all active:scale-[0.98] shadow-sm">
+                Import
+            </button>
+            <button id="export-btn" data-i18n="export" class="bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 font-medium px-3 py-2 rounded-xl text-xs sm:text-sm transition-all active:scale-[0.98] shadow-sm">
+                Export
+            </button>
+            <button id="new-session-btn" class="bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium px-3.5 py-2 rounded-xl text-xs sm:text-sm transition-all active:scale-[0.98] shadow-sm flex items-center gap-1">
+                <span>+</span> <span data-i18n="newSession">New Session</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Floating Compare Bar (Shown when 2 sessions are selected) -->
+    <div id="compare-bar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-11/12 max-w-md bg-stone-900 text-stone-100 px-4 py-3 rounded-2xl shadow-xl flex items-center justify-between border border-stone-800 backdrop-blur-md">
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="compare-bar-label" class="text-xs font-medium text-stone-200">2 sessions selected</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="compare-go-btn" data-i18n="compareSessionsBtn" class="bg-white hover:bg-stone-100 text-stone-900 font-semibold px-3.5 py-1.5 rounded-xl text-xs transition-all active:scale-95 shadow-sm">
+                Compare →
+            </button>
+            <button id="compare-clear-btn" class="text-stone-400 hover:text-stone-200 text-xs p-1" aria-label="Clear selection">
+                ✕
+            </button>
+        </div>
+    </div>
+
+    <!-- Sessions grouped by category -->
+    <main id="sessions-container">
+
+        <!-- ═══════════ HERO: First-Time Visitor Experience ═══════════ -->
+        <section id="hero-section" class="hidden my-6">
+
+            <!-- Animated Mini-Duel Visual -->
+            <div class="fade-up fade-up-d1 relative flex items-center justify-center gap-6 sm:gap-10 py-12 sm:py-16 mb-2 select-none" aria-hidden="true">
+                <!-- Left floating card -->
+                <div class="hero-card-left bg-white border border-stone-200/80 rounded-2xl shadow-lg px-6 sm:px-8 py-5 sm:py-6 text-center cursor-default">
+                    <span class="font-serif italic text-2xl sm:text-3xl text-stone-900">Isa</span>
+                </div>
+                <!-- VS badge -->
+                <div data-i18n="duelOr" class="pulse-glow w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center text-[10px] sm:text-xs font-bold uppercase tracking-wider flex-shrink-0 z-10">
+                    or
+                </div>
+                <!-- Right floating card -->
+                <div class="hero-card-right bg-white border border-stone-200/80 rounded-2xl shadow-lg px-6 sm:px-8 py-5 sm:py-6 text-center cursor-default">
+                    <span class="font-serif italic text-2xl sm:text-3xl text-stone-900">Nola</span>
+                </div>
+            </div>
+
+            <!-- Hero copy -->
+            <div class="fade-up fade-up-d2 text-center mb-10">
+                <h2 data-i18n="heroTitle" class="font-serif italic text-2xl sm:text-3xl text-stone-900 mb-2 tracking-tight">Settle the baby name debate</h2>
+                <p data-i18n="heroSub" class="text-stone-500 text-xs sm:text-sm max-w-sm mx-auto leading-relaxed">
+                    One choice at a time. Each of you ranks your favorites head-to-head, then see where you agree.
+                </p>
+            </div>
+
+            <!-- CTA -->
+            <div class="fade-up fade-up-d3 text-center mb-14">
+                <button id="hero-new-btn" class="bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium px-8 py-3.5 rounded-xl shadow-md transition-all active:scale-[0.98] text-sm inline-flex items-center gap-2">
+                    <span>+</span> <span data-i18n="createFirstBtn">Create First Session</span>
+                </button>
+            </div>
+
+            <!-- ═══════════ BENTO GRID: How It Works ═══════════ -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
+                <!-- Card 1: The Method -->
+                <div class="fade-up fade-up-d3 bento-card bg-white border border-stone-200/80 rounded-2xl p-6 text-center">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-stone-100 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+                    </div>
+                    <h3 data-i18n="bentoMethodTitle" class="font-serif italic text-base text-stone-900 mb-1">Pick your favorite</h3>
+                    <p data-i18n="bentoMethodDesc" class="text-stone-500 text-xs leading-relaxed">Two names appear. You tap the one you prefer. Repeat until ranked.</p>
+                </div>
+                <!-- Card 2: Privacy -->
+                <div class="fade-up fade-up-d4 bento-card bg-white border border-stone-200/80 rounded-2xl p-6 text-center">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-stone-100 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    </div>
+                    <h3 data-i18n="bentoPrivacyTitle" class="font-serif italic text-base text-stone-900 mb-1">100% private</h3>
+                    <p data-i18n="bentoPrivacyDesc" class="text-stone-500 text-xs leading-relaxed">Everything stays on your phone. No accounts, no tracking, no server.</p>
+                </div>
+                <!-- Card 3: Consensus -->
+                <div class="fade-up fade-up-d5 bento-card bg-white border border-stone-200/80 rounded-2xl p-6 text-center">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-stone-100 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                    </div>
+                    <h3 data-i18n="bentoConsensusTitle" class="font-serif italic text-base text-stone-900 mb-1">Find consensus</h3>
+                    <p data-i18n="bentoConsensusDesc" class="text-stone-500 text-xs leading-relaxed">Compare both rankings and instantly see your mutual top names.</p>
+                </div>
+            </div>
+
+            <!-- Cultural lists teaser -->
+            <div class="fade-up fade-up-d5 bg-white border border-stone-200/80 rounded-2xl p-5 sm:p-6 text-center">
+                <p data-i18n="starterPacksTeaser" class="text-stone-500 text-xs mb-3">Includes curated starter packs from</p>
+                <div class="flex flex-wrap items-center justify-center gap-2">
+                    <span data-i18n="cultureDutch" class="text-xs bg-stone-100 text-stone-700 font-medium px-3 py-1 rounded-lg">Dutch</span>
+                    <span data-i18n="cultureArabic" class="text-xs bg-stone-100 text-stone-700 font-medium px-3 py-1 rounded-lg">Arabic</span>
+                    <span data-i18n="cultureEnglish" class="text-xs bg-stone-100 text-stone-700 font-medium px-3 py-1 rounded-lg">English</span>
+                    <span data-i18n="cultureFrench" class="text-xs bg-stone-100 text-stone-700 font-medium px-3 py-1 rounded-lg">French</span>
+                    <span data-i18n="cultureSpanish" class="text-xs bg-stone-100 text-stone-700 font-medium px-3 py-1 rounded-lg">Spanish</span>
+                    <span data-i18n="cultureNordic" class="text-xs bg-stone-100 text-stone-700 font-medium px-3 py-1 rounded-lg">Nordic</span>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ═══════════ RETURNING USER: Session List ═══════════ -->
+        <div id="sessions-list"></div>
+    </main>
+
+</div>
+
+    <!-- SEO content: visually hidden but crawlable by search engines -->
+    <div class="sr-only" aria-hidden="true">
+        <h2>How Pairwise Baby Name Ranking Works</h2>
+        <p>Choosing a baby name together shouldn't be an argument. The Baby Name Ranker is a pairwise consensus app designed for couples. Instead of staring at an overwhelming list of 500 names, this tool asks you a simple question repeatedly: "Do you prefer Name A or Name B?". Using a mathematically efficient merge-sort algorithm, it builds a complete top-to-bottom ranking for both partners. When you're both finished, compare your lists to instantly reveal your mutual favorites.</p>
+        <h3>Frequently Asked Questions</h3>
+        <p>How do couples choose a baby name without arguing? By using a pairwise comparison tool, each partner evaluates names head-to-head in a private ranking session. Once both are finished, the app calculates the mathematical consensus, revealing the mutual top choices without the stress of debating every single name.</p>
+        <p>Is our baby name data private? Yes, completely private. The application runs 100% locally in your web browser. We do not use tracking cookies, and no data is ever uploaded to a server. Your rankings stay on your device unless you manually export them.</p>
+        <p>Can we use lists from different cultures? Yes! The app includes curated starter packs for Dutch, Arabic, French, Spanish, Nordic, and English baby names. You can mix and match these lists or paste your own custom list of names.</p>
+        <p>Designed for parents. Privacy-first, offline-ready.</p>
+    </div>
+
+</div>
+
+<script>
+    // ── Language Switcher Mount ──────────────────────
+    if (window.BNR_I18N) {
+        document.getElementById('lang-switcher-mount').innerHTML = BNR_I18N.renderLanguageSwitcher();
+    }
+
+    // ── State ────────────────────────────────────────
+    let selectedIds = new Set();
+    let selectedCat = 'Girls';
+
+    // ── Toast Helper ─────────────────────────────────
+    function toast(msg, duration = 2400) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.remove('opacity-0', 'translate-y-[-10px]', 'pointer-events-none');
+        el.classList.add('opacity-100', 'translate-y-0');
+        clearTimeout(el._timer);
+        el._timer = setTimeout(() => {
+            el.classList.add('opacity-0', 'translate-y-[-10px]', 'pointer-events-none');
+            el.classList.remove('opacity-100', 'translate-y-0');
+        }, duration);
+    }
+
+    // ── Clean URL Handling ──────────────────────────
+    if (window.location.pathname.endsWith('/index.html')) {
+        const cleanPath = window.location.pathname.replace(/\/index\.html$/, '/') + window.location.search + window.location.hash;
+        window.history.replaceState(null, '', cleanPath);
+    }
+
+    // ── Dialog Helpers with Light-Dismiss ───────────
+    const modalNew = document.getElementById('modal-new');
+    const modalImport = document.getElementById('modal-import');
+    const modalExport = document.getElementById('modal-export');
+
+    function setupDialogBackdropDismiss(dialog) {
+        dialog.addEventListener('click', (e) => {
+            const rect = dialog.getBoundingClientRect();
+            const isInDialog = (
+                rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
+                rect.left <= e.clientX && e.clientX <= rect.left + rect.width
+            );
+            if (!isInDialog) {
+                dialog.close();
+            }
+        });
+    }
+
+    [modalNew, modalImport, modalExport].forEach(setupDialogBackdropDismiss);
+
+    // ── New Session Dialog ───────────────────────────
+    function updateNamesCount() {
+        const ta = document.getElementById('input-names');
+        const count = ta.value.split('\n').map(n => n.trim()).filter(Boolean).length;
+        document.getElementById('names-count').textContent = BNR_I18N.t('namesCount', { count });
+    }
+
+    document.getElementById('input-names').addEventListener('input', updateNamesCount);
+
+    function openNewModal() {
+        document.getElementById('input-person').value = '';
+        setCategory(selectedCat || 'Girls');
+        document.getElementById('input-names').value = '';
+        updateNamesCount();
+        modalNew.showModal();
+        document.getElementById('input-person').focus();
+    }
+
+    document.getElementById('new-session-btn').addEventListener('click', openNewModal);
+    document.getElementById('hero-new-btn').addEventListener('click', openNewModal);
+    document.getElementById('modal-close').addEventListener('click', () => modalNew.close());
+
+    function setCategory(cat) {
+        selectedCat = ['Girls', 'Boys', 'Unisex'].includes(cat) ? cat : 'Girls';
+        document.querySelectorAll('.cat-btn').forEach(b => {
+            const active = b.dataset.cat === selectedCat;
+            if (active) {
+                b.className = 'cat-btn border border-stone-900 bg-stone-900 text-stone-50 font-medium py-2 rounded-xl text-xs sm:text-sm transition-all shadow-sm';
+            } else {
+                b.className = 'cat-btn border border-stone-200 bg-white text-stone-600 font-medium py-2 rounded-xl text-xs sm:text-sm transition-all hover:bg-stone-50';
+            }
+        });
+    }
+
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setCategory(btn.dataset.cat);
+            // Clear textarea when switching category to avoid gender mismatches
+            document.getElementById('input-names').value = '';
+            updateNamesCount();
+        });
+    });
+
+    // Cultural Appenders
+    document.querySelectorAll('.culture-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const culture = btn.dataset.culture;
+            const packList = BNR.STARTER_PACKS[culture]?.[selectedCat] || [];
+            
+            const ta = document.getElementById('input-names');
+            let currentNames = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
+            
+            // Append and deduplicate
+            const newSet = new Set(currentNames);
+            packList.forEach(name => newSet.add(name));
+            
+            ta.value = Array.from(newSet).join('\n');
+            updateNamesCount();
+
+            // Give the button a quick flash effect to show it was added
+            btn.classList.add('bg-stone-200', 'border-stone-400');
+            setTimeout(() => {
+                btn.classList.remove('bg-stone-200', 'border-stone-400');
+            }, 150);
+        });
+    });
+
+    document.getElementById('pack-clear').addEventListener('click', () => {
+        document.getElementById('input-names').value = '';
+        updateNamesCount();
+    });
+
+    document.getElementById('modal-sort-az').addEventListener('click', () => {
+        const ta = document.getElementById('input-names');
+        const names = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
+        names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        ta.value = names.join('\n');
+        updateNamesCount();
+    });
+
+    document.getElementById('form-new-session').addEventListener('submit', () => {
+        const person = document.getElementById('input-person').value.trim();
+        const rawNames = document.getElementById('input-names').value
+            .split('\n').map(n => n.trim()).filter(Boolean);
+        const names = [...new Set(rawNames)];
+
+        if (!person) { toast(BNR_I18N.t('personRequiredAlert')); return; }
+        if (names.length < 2) { toast(BNR_I18N.t('minNamesAlert')); return; }
+
+        const session = BNR.createSession({ person, category: selectedCat, names });
+        if (!session) { toast('Invalid session parameters.'); return; }
+        BNR.saveSession(session);
+        modalNew.close();
+        window.location.href = `ranker.html?session=${encodeURIComponent(session.id)}`;
+    });
+
+    // ── Compare Bar ──────────────────────────────────
+    function updateCompareBar() {
+        const bar = document.getElementById('compare-bar');
+        const label = document.getElementById('compare-bar-label');
+        if (selectedIds.size === 2) {
+            const sessions = BNR.loadSessions().filter(s => selectedIds.has(s.id));
+            if (sessions.length === 2) {
+                label.textContent = `${sessions[0].person} & ${sessions[1].person}`;
+            } else {
+                label.textContent = BNR_I18N.t('sessionsSelected', { count: selectedIds.size });
+            }
+            bar.classList.remove('hidden');
+        } else {
+            bar.classList.add('hidden');
+        }
+        document.querySelectorAll('.session-checkbox').forEach(cb => {
+            cb.checked = selectedIds.has(cb.dataset.id);
+        });
+    }
+
+    document.getElementById('compare-go-btn').addEventListener('click', () => {
+        const [a, b] = [...selectedIds];
+        window.location.href = `compare.html?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`;
+    });
+
+    document.getElementById('compare-clear-btn').addEventListener('click', () => {
+        selectedIds.clear();
+        updateCompareBar();
+    });
+
+    // ── Render Sessions ──────────────────────────────
+    function formatDate(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        return isNaN(d.getTime()) ? '' : d.toLocaleDateString(BNR_I18N.getLanguage(), { month: 'short', day: 'numeric' });
+    }
+
+    function sessionLabel(s) {
+        return s.round > 1 ? `${s.person} · ${BNR_I18N.t('roundBadge', { round: s.round })}` : s.person;
+    }
+
+    function activeCount(s) {
+        return s.status === 'ranked'
+            ? s.ranking.filter(n => !s.deleted.includes(n)).length
+            : s.names.length;
+    }
+
+    function renderSessions() {
+        const sessions = BNR.loadSessions();
+        const list = document.getElementById('sessions-list');
+        const heroSection = document.getElementById('hero-section');
+        list.innerHTML = '';
+
+        if (sessions.length === 0) {
+            heroSection.classList.remove('hidden');
+            return;
+        }
+        heroSection.classList.add('hidden');
+
+        // Group by category
+        const groups = {};
+        sessions.forEach(s => {
+            const cat = s.category || 'Girls';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(s);
+        });
+
+        const catOrder = ['Girls', 'Boys', 'Unisex'];
+        const allCats = [...new Set([...catOrder, ...Object.keys(groups)])];
+
+        allCats.forEach(cat => {
+            if (!groups[cat] || groups[cat].length === 0) return;
+            const catSessions = groups[cat];
+            const catTranslated = BNR_I18N.t('cat' + cat);
+
+            const section = document.createElement('section');
+            section.className = 'mb-10';
+
+            const header = document.createElement('div');
+            header.className = 'flex items-center justify-between mb-3 px-0.5';
+            header.innerHTML = `
+                <h3 class="font-serif italic text-xl text-stone-900 tracking-tight">${BNR.escapeHtml(catTranslated)}</h3>
+                <span class="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">${catSessions.length}</span>
+            `;
+            section.appendChild(header);
+
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 gap-3.5';
+
+            catSessions.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'bg-white border border-stone-200/80 rounded-2xl p-5 shadow-[0_2px_8px_-2px_rgba(40,30,20,0.03)] hover:border-stone-300 transition-all relative';
+
+                const isRanked = s.status === 'ranked';
+                const active = activeCount(s);
+                const deleted = isRanked ? s.deleted.length : 0;
+                const topNames = isRanked ? s.ranking.filter(n => !s.deleted.includes(n)).slice(0, 5) : [];
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            <label class="relative flex items-center justify-center cursor-pointer">
+                                <input type="checkbox" class="session-checkbox w-4 h-4 accent-stone-900 flex-shrink-0 cursor-pointer rounded border-stone-300" data-id="${BNR.escapeHtml(s.id)}" title="Select for comparison">
+                            </label>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h4 class="font-serif text-lg font-medium text-stone-900">${BNR.escapeHtml(sessionLabel(s))}</h4>
+                                    ${s.parentId ? `<span class="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded-md font-semibold uppercase tracking-wider">${BNR_I18N.t('roundBadge', { round: s.round })}</span>` : ''}
+                                    <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold uppercase tracking-wider ${isRanked ? 'bg-stone-100 text-stone-700' : 'bg-amber-50 text-amber-800 border border-amber-200/60'}">
+                                        ${isRanked ? BNR_I18N.t('rankedStatus') : BNR_I18N.t('setupStatus')}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-stone-400 mt-0.5 font-normal">
+                                    ${BNR_I18N.t('activeNamesCount', { count: active })}${deleted > 0 ? ` · ${deleted} ${BNR_I18N.t('removedNamesTitle').toLowerCase()}` : ''} · ${formatDate(s.updatedAt)}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            ${isRanked ? `
+                            <button data-action="rerank" data-id="${BNR.escapeHtml(s.id)}" class="action-btn text-xs bg-stone-50 hover:bg-stone-100 text-stone-700 px-3 py-1.5 rounded-lg font-medium transition-all active:scale-[0.98] border border-stone-200/80" title="${BNR_I18N.t('rerank')}">
+                                ${BNR_I18N.t('rerank')}
+                            </button>
+                            ` : ''}
+                            <button data-action="open" data-id="${BNR.escapeHtml(s.id)}" class="action-btn text-xs bg-stone-900 hover:bg-stone-800 text-stone-50 px-3.5 py-1.5 rounded-lg font-medium transition-all active:scale-[0.98] shadow-sm">
+                                ${isRanked ? BNR_I18N.t('viewResultsBtn') : BNR_I18N.t('continueBtn')}
+                            </button>
+                            <button data-action="delete" data-id="${BNR.escapeHtml(s.id)}" class="action-btn text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors" title="${BNR_I18N.t('delete')}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    ${isRanked && topNames.length > 0 ? `
+                    <div class="mt-3.5 pt-3 border-t border-stone-100 flex flex-col gap-1.5">
+                        <div class="flex flex-wrap gap-1.5">
+                            ${topNames.map((n, i) => `
+                                <span class="text-xs px-2.5 py-0.5 rounded-md font-medium ${i === 0 ? 'bg-stone-900 text-stone-50' : 'bg-stone-100 text-stone-700'}">
+                                    ${i + 1}. ${BNR.escapeHtml(n)}
+                                </span>
+                            `).join('')}
+                            ${active > 5 ? `<span class="text-xs text-stone-400 px-1 py-0.5 font-normal">+${active - 5}</span>` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
+                `;
+
+                grid.appendChild(card);
+            });
+
+            section.appendChild(grid);
+            list.appendChild(section);
+        });
+
+        // Checkbox events
+        document.querySelectorAll('.session-checkbox').forEach(cb => {
+            cb.checked = selectedIds.has(cb.dataset.id);
+            cb.addEventListener('change', () => {
+                if (cb.checked) {
+                    if (selectedIds.size >= 2) {
+                        cb.checked = false;
+                        toast('Select 2 sessions to compare.');
+                        return;
+                    }
+                    selectedIds.add(cb.dataset.id);
+                } else {
+                    selectedIds.delete(cb.dataset.id);
+                }
+                updateCompareBar();
+            });
+        });
+
+        // Action buttons
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const { action, id } = btn.dataset;
+                if (action === 'open') {
+                    window.location.href = `ranker.html?session=${encodeURIComponent(id)}`;
+                } else if (action === 'rerank') {
+                    const parent = BNR.getSession(id);
+                    if (!parent) return;
+                    const active = parent.ranking.filter(n => !parent.deleted.includes(n));
+                    if (active.length < 2) {
+                        toast(BNR_I18N.t('minNamesAlert'));
+                        return;
+                    }
+                    const child = BNR.createReRankSession(parent);
+                    if (!child) return;
+                    BNR.saveSession(child);
+                    window.location.href = `ranker.html?session=${encodeURIComponent(child.id)}`;
+                } else if (action === 'delete') {
+                    if (!confirm(BNR_I18N.t('confirmDeleteSession'))) return;
+                    BNR.deleteSession(id);
+                    selectedIds.delete(id);
+                    updateCompareBar();
+                    renderSessions();
+                    toast('Session removed.');
+                }
+            });
+        });
+    }
+
+    renderSessions();
+
+    // Listen for language changes to re-render dynamic content
+    window.addEventListener('bnr:languagechange', () => {
+        renderSessions();
+        updateNamesCount();
+        updateCompareBar();
+        const switcherMount = document.getElementById('lang-switcher-mount');
+        if (switcherMount) {
+            switcherMount.innerHTML = BNR_I18N.renderLanguageSwitcher();
+        }
+    });
+
+    // ── Export Modal & Web Share ───────────────────────
+    document.getElementById('export-btn').addEventListener('click', () => {
+        const sessions = BNR.loadSessions();
+        if (sessions.length === 0) { toast('No sessions to export yet.'); return; }
+        modalExport.showModal();
+    });
+
+    document.getElementById('export-modal-close').addEventListener('click', () => modalExport.close());
+
+    // Native Web Share API with Clipboard Fallback
+    document.getElementById('export-native-share').addEventListener('click', async () => {
+        const payload = JSON.stringify(BNR.createExportData(), null, 2);
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: BNR_I18N.t('appTitle'),
+                    text: payload
+                });
+                toast(BNR_I18N.t('copiedSuccess'));
+                modalExport.close();
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+            }
+        }
+        // Fallback to clipboard
+        navigator.clipboard.writeText(payload).then(() => {
+            toast(BNR_I18N.t('copiedSuccess'));
+            modalExport.close();
+        });
+    });
+
+    document.getElementById('export-copy-clipboard').addEventListener('click', () => {
+        const payload = JSON.stringify(BNR.createExportData(), null, 2);
+        navigator.clipboard.writeText(payload).then(() => {
+            toast(BNR_I18N.t('copiedSuccess'));
+            modalExport.close();
+        });
+    });
+
+    document.getElementById('export-download-file').addEventListener('click', () => {
+        const payload = JSON.stringify(BNR.createExportData(), null, 2);
+        const blob = new Blob([payload], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `babynamer-export-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast(BNR_I18N.t('copiedSuccess'));
+        modalExport.close();
+    });
+
+    // ── Import Modal Handling ─────────────────────────
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json,application/json';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+
+    document.getElementById('import-btn').addEventListener('click', () => {
+        modalImport.showModal();
+    });
+
+    document.getElementById('import-modal-close').addEventListener('click', () => modalImport.close());
+    document.getElementById('import-file-btn').addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            processImport(e.target.result);
+            fileInput.value = '';
+        };
+        reader.readAsText(file);
+    });
+
+    document.getElementById('paste-clipboard-btn').addEventListener('click', async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            document.getElementById('import-paste-area').value = text;
+            toast('Pasted!');
+        } catch {
+            toast('Please paste manually.');
+        }
+    });
+
+    document.getElementById('import-paste-btn').addEventListener('click', () => {
+        const text = document.getElementById('import-paste-area').value.trim();
+        if (!text) { toast('Paste your JSON code first.'); return; }
+        processImport(text);
+    });
+
+    function processImport(jsonText) {
+        let parsed;
+        try {
+            parsed = JSON.parse(jsonText);
+        } catch {
+            toast(BNR_I18N.t('importError'));
+            return;
+        }
+
+        const incoming = parsed.sessions ?? (Array.isArray(parsed) ? parsed : null);
+        if (!incoming || !Array.isArray(incoming) || incoming.length === 0) {
+            toast(BNR_I18N.t('importNoValid'));
+            return;
+        }
+
+        const existing = BNR.loadSessions();
+        const existingIds = new Set(existing.map(s => s.id));
+
+        let added = 0, skipped = 0;
+        incoming.forEach(s => {
+            const valid = BNR.validateSession(s);
+            if (!valid) { skipped++; return; }
+            if (existingIds.has(valid.id)) { skipped++; return; }
+            BNR.saveSession(valid);
+            existingIds.add(valid.id);
+            added++;
+        });
+
+        modalImport.close();
+        document.getElementById('import-paste-area').value = '';
+        renderSessions();
+        
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (added > 0 && typeof confetti === 'function' && !prefersReducedMotion) {
+            confetti({ particleCount: 60, spread: 60, origin: { y: 0.8 } });
+        }
+        
+        toast(BNR_I18N.t('importSuccess', { count: added }));
+    }
+</script>
+</body>
+</html>

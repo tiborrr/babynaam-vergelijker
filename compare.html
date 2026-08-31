@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Consensus — Baby Name Ranker</title>
+    <meta name="description" content="A pairwise ranking tool for couples to compare and agree on baby names.">
+    <link rel="canonical" href="https://baby.casteleijn.com/compare.html">
+    <meta name="robots" content="noindex, follow"> <!-- Internal tool page, don't index directly in SERPs to avoid duplicate content, index the homepage instead -->
+    
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#FAF8F5">
+    <!-- Google Fonts: Newsreader & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
+    <script src="storage.js"></script>
+    <script src="i18n.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        serif: ['"Newsreader"', 'Georgia', 'serif'],
+                    },
+                    colors: {
+                        stone: {
+                            50: '#FAF8F5',
+                            100: '#F4EFEA',
+                            200: '#E7DFD5',
+                            300: '#D5C9BC',
+                            400: '#A89B8C',
+                            500: '#7D7063',
+                            600: '#5A5046',
+                            700: '#3F3730',
+                            800: '#2A241F',
+                            900: '#1C1815'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @view-transition {
+            navigation: auto;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #FAF8F5;
+            color: #1C1815;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Modern top-layer dialog transitions with @starting-style */
+        dialog {
+            opacity: 0;
+            transform: scale(0.97) translateY(6px);
+            transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                        display 0.22s allow-discrete,
+                        overlay 0.22s allow-discrete;
+        }
+        dialog[open] {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+        @starting-style {
+            dialog[open] {
+                opacity: 0;
+                transform: scale(0.97) translateY(6px);
+            }
+        }
+        dialog::backdrop {
+            background-color: rgba(28, 24, 21, 0);
+            backdrop-filter: blur(0px);
+            transition: background-color 0.22s ease-out,
+                        backdrop-filter 0.22s ease-out,
+                        display 0.22s allow-discrete,
+                        overlay 0.22s allow-discrete;
+        }
+        dialog[open]::backdrop {
+            background-color: rgba(28, 24, 21, 0.35);
+            backdrop-filter: blur(4px);
+        }
+        @starting-style {
+            dialog[open]::backdrop {
+                background-color: rgba(28, 24, 21, 0);
+                backdrop-filter: blur(0px);
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            dialog, dialog::backdrop {
+                transform: none !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body class="selection:bg-stone-200 selection:text-stone-900 min-h-screen">
+
+<!-- Toast Notification -->
+<div id="toast" role="status" aria-live="polite" class="fixed top-5 right-5 z-[100] opacity-0 pointer-events-none transition-all duration-300 translate-y-[-8px] bg-stone-900 text-stone-100 text-xs sm:text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg border border-stone-800 backdrop-blur-md flex items-center gap-2"></div>
+
+<!-- Session picker native dialog -->
+<dialog id="modal-picker" class="bg-transparent p-3 sm:p-4 max-w-md w-full outline-none m-auto">
+    <div id="picker-content" class="bg-white rounded-2xl shadow-xl p-6 border border-stone-200/80">
+        <div class="flex items-center justify-between pb-2 mb-4 border-b border-stone-100">
+            <h2 id="picker-title" data-i18n="selectSessionPrompt" class="font-serif italic text-xl text-stone-900">Select Ranking Session</h2>
+            <button id="picker-close" type="button" aria-label="Close dialog" class="w-7 h-7 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center text-lg transition-colors">&times;</button>
+        </div>
+        <div id="picker-list" class="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1"></div>
+    </div>
+</dialog>
+
+<div class="max-w-3xl mx-auto px-4 sm:px-6 pt-10 pb-32">
+
+    <!-- Top Bar with Back Link & Language Switcher -->
+    <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+        <a href="./" class="inline-flex items-center gap-1 text-xs font-medium text-stone-500 hover:text-stone-900 bg-white px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all">
+            <span>←</span> <span data-i18n="dashboard">Dashboard</span>
+        </a>
+        <div id="lang-switcher-compare"></div>
+    </div>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8 flex-wrap gap-4 pb-6 border-b border-stone-200/60">
+        <div>
+            <h1 data-i18n="consensusTitle" class="font-serif italic text-3xl sm:text-4xl text-stone-900 tracking-tight">Partner Consensus</h1>
+            <p data-i18n="consensusSub" class="text-stone-500 text-xs sm:text-sm mt-0.5">Compare two rankings to reveal mutual favorites and agreement.</p>
+        </div>
+        <div class="flex gap-2">
+            <button id="copy-btn" class="bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 text-xs sm:text-sm font-medium px-3.5 py-2 rounded-xl shadow-sm transition-all active:scale-[0.98] flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                <span data-i18n="shareSummaryBtn">Share Summary</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Session pickers -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <button id="pick-a-btn" class="bg-white border border-dashed border-stone-300 hover:border-stone-500 text-stone-600 rounded-xl p-4 text-left transition-all flex items-center gap-3 shadow-sm hover:shadow">
+            <div class="w-8 h-8 rounded-lg bg-stone-100 text-stone-700 flex items-center justify-center font-serif text-sm flex-shrink-0">
+                1
+            </div>
+            <div class="min-w-0">
+                <span class="text-[10px] uppercase font-semibold text-stone-400 block tracking-wider" data-i18n="partnerLabel">Partner 1</span>
+                <span id="pick-a-label" class="font-medium text-stone-900 text-sm truncate block" data-i18n="selectSessionPrompt">Select first ranking…</span>
+            </div>
+        </button>
+
+        <button id="pick-b-btn" class="bg-white border border-dashed border-stone-300 hover:border-stone-500 text-stone-600 rounded-xl p-4 text-left transition-all flex items-center gap-3 shadow-sm hover:shadow">
+            <div class="w-8 h-8 rounded-lg bg-stone-100 text-stone-700 flex items-center justify-center font-serif text-sm flex-shrink-0">
+                2
+            </div>
+            <div class="min-w-0">
+                <span class="text-[10px] uppercase font-semibold text-stone-400 block tracking-wider" data-i18n="partnerLabel">Partner 2</span>
+                <span id="pick-b-label" class="font-medium text-stone-900 text-sm truncate block" data-i18n="selectSessionPrompt">Select second ranking…</span>
+            </div>
+        </button>
+    </div>
+
+    <!-- Celebration & Highlights Box -->
+    <div id="match-banner" class="hidden mb-6 bg-white p-6 rounded-2xl border border-stone-200/80 shadow-[0_2px_8px_-2px_rgba(40,30,20,0.03)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <span data-i18n="statusTopMutual" class="text-[10px] font-semibold uppercase tracking-widest text-stone-500 bg-stone-100 px-2.5 py-0.5 rounded-md">Top Consensus Match</span>
+            </div>
+            <h3 id="match-banner-title" class="font-serif italic text-2xl sm:text-3xl text-stone-900 mt-1">
+                #1 <span data-i18n="statusTopMutual">Mutual Favorite</span>: <span id="top-match-name" class="font-normal not-italic underline decoration-stone-300 underline-offset-4">...</span>
+            </h3>
+            <p id="match-banner-desc" class="text-xs text-stone-500 mt-1">Calculated from individual rankings.</p>
+        </div>
+        <button id="celebrate-btn" class="bg-stone-900 hover:bg-stone-800 text-stone-50 text-xs font-medium px-4 py-2 rounded-xl shadow-sm transition-all active:scale-95 flex-shrink-0 flex items-center gap-1.5">
+            <span>Celebrate ✦</span>
+        </button>
+    </div>
+
+    <!-- Filter & Sort Controls -->
+    <div id="controls" class="hidden flex flex-wrap items-center justify-between gap-3 mb-4 bg-white p-3 rounded-xl border border-stone-200/80 shadow-sm">
+        <div class="flex items-center gap-2 flex-1 min-w-[180px] bg-stone-50 px-3 py-1.5 rounded-lg border border-stone-200/60">
+            <svg class="w-3.5 h-3.5 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" id="search-input" placeholder="Search names…" class="w-full text-xs outline-none bg-transparent font-medium placeholder:text-stone-400">
+        </div>
+        <div class="flex items-center gap-1.5 text-xs font-medium flex-wrap">
+            <button id="filter-all" class="filter-tab px-3 py-1 rounded-lg bg-stone-900 text-stone-50 transition-all">All Names</button>
+            <button id="filter-top" class="filter-tab px-3 py-1 rounded-lg bg-stone-100 text-stone-600 hover:bg-stone-200 transition-all">Top 5</button>
+            <button id="filter-exact" class="filter-tab px-3 py-1 rounded-lg bg-stone-100 text-stone-600 hover:bg-stone-200 transition-all">Exact Matches</button>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div id="table-wrap" class="hidden bg-white rounded-2xl shadow-sm border border-stone-200/80 overflow-hidden mb-6">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[540px]">
+                <thead>
+                    <tr class="bg-stone-50 border-b border-stone-200/80 text-[10px] font-semibold text-stone-500 uppercase tracking-wider select-none">
+                        <th class="p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="overall">
+                            <div class="flex items-center gap-1"><span data-i18n="colRank">Consensus</span> <span id="si-overall" class="text-stone-900">▲</span></div>
+                        </th>
+                        <th class="p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="name">
+                            <div class="flex items-center gap-1"><span data-i18n="colName">Name</span> <span id="si-name" class="text-stone-300">↕</span></div>
+                        </th>
+                        <th class="p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="rankA">
+                            <div class="flex items-center gap-1"><span id="col-a-label">Partner 1</span> <span id="si-rankA" class="text-stone-300">↕</span></div>
+                        </th>
+                        <th class="p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="rankB">
+                            <div class="flex items-center gap-1"><span id="col-b-label">Partner 2</span> <span id="si-rankB" class="text-stone-300">↕</span></div>
+                        </th>
+                        <th class="p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="diff">
+                            <div class="flex items-center gap-1"><span data-i18n="colDiff">Difference</span> <span id="si-diff" class="text-stone-300">↕</span></div>
+                        </th>
+                        <th class="p-3.5 text-right pr-4" data-i18n="delete">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="results-tbody" class="divide-y divide-stone-100 text-xs sm:text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Deleted bin -->
+    <div id="deleted-section" class="hidden bg-stone-100/70 rounded-2xl p-4 border border-stone-200/80">
+        <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 flex items-center gap-1">
+                <span data-i18n="removedNamesTitle">Removed Names</span>
+                <span id="del-count" class="text-stone-400 font-normal ml-0.5"></span>
+            </h3>
+            <button id="restore-all-btn" data-i18n="restoreAll" class="text-xs font-medium text-stone-600 hover:text-stone-900 hover:underline">Restore All</button>
+        </div>
+        <div id="deleted-chips" class="flex flex-wrap gap-1.5"></div>
+    </div>
+
+    <!-- Empty placeholder when no sessions chosen -->
+    <div id="placeholder" class="text-center py-16 text-stone-400 bg-white rounded-2xl border border-stone-200/80 p-8 my-4">
+        <span class="text-2xl font-serif italic block mb-2 text-stone-500">✦</span>
+        <h3 data-i18n="selectSessionPrompt" class="font-serif italic text-xl text-stone-800 mb-1">Select two sessions to compare</h3>
+        <p data-i18n="consensusSub" class="text-stone-400 text-xs max-w-sm mx-auto">Compare two rankings to reveal mutual favorites and agreement.</p>
+    </div>
+
+</div>
+
+<script>
+    // ── Mount Language Switcher ───────────────────────────
+    function mountLanguageSwitcher() {
+        if (window.BNR_I18N) {
+            const mount = document.getElementById('lang-switcher-compare');
+            if (mount) mount.innerHTML = BNR_I18N.renderLanguageSwitcher();
+        }
+    }
+    mountLanguageSwitcher();
+
+    // ── State ─────────────────────────────────────────────
+    let sessionA = null;
+    let sessionB = null;
+    let combined = [];
+    let deletedNames = new Set();
+    let currentSort = { column: 'overall', direction: 'asc' };
+    let searchQuery = '';
+    let currentFilter = 'all'; // 'all' | 'top' | 'exact'
+
+    // ── Toast Helper ──────────────────────────────────────
+    function toast(msg, duration = 2400) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.remove('opacity-0', 'translate-y-[-10px]', 'pointer-events-none');
+        el.classList.add('opacity-100', 'translate-y-0');
+        clearTimeout(el._timer);
+        el._timer = setTimeout(() => {
+            el.classList.add('opacity-0', 'translate-y-[-10px]', 'pointer-events-none');
+            el.classList.remove('opacity-100', 'translate-y-0');
+        }, duration);
+    }
+
+    // ── Session Picker Native Dialog ──────────────────────
+    let pickerTarget = null;
+    const modalPicker = document.getElementById('modal-picker');
+
+    modalPicker.addEventListener('click', (e) => {
+        const rect = modalPicker.getBoundingClientRect();
+        const isInDialog = (
+            rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
+            rect.left <= e.clientX && e.clientX <= rect.left + rect.width
+        );
+        if (!isInDialog) {
+            closePicker();
+        }
+    });
+
+    document.getElementById('pick-a-btn').addEventListener('click', () => openPicker('a'));
+    document.getElementById('pick-b-btn').addEventListener('click', () => openPicker('b'));
+    document.getElementById('picker-close').addEventListener('click', closePicker);
+
+    function openPicker(target) {
+        pickerTarget = target;
+        const sessions = BNR.loadSessions().filter(s => s.status === 'ranked');
+        const list = document.getElementById('picker-list');
+        list.innerHTML = '';
+
+        if (sessions.length === 0) {
+            list.innerHTML = `<p class="text-xs text-stone-400 text-center py-6">${BNR_I18N.t('noRankedSessions')}</p>`;
+        } else {
+            sessions.forEach(s => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left bg-stone-50 hover:bg-stone-100 border border-stone-200 rounded-xl p-3 transition-all flex items-center justify-between gap-3';
+                const active = s.ranking.filter(n => !s.deleted.includes(n)).length;
+                const catTranslated = BNR_I18N.t('cat' + s.category);
+                btn.innerHTML = `
+                    <div>
+                        <div class="font-serif font-medium text-stone-900 text-sm">${BNR.escapeHtml(s.person)} · ${BNR.escapeHtml(catTranslated)}${s.round > 1 ? ` · R${s.round}` : ''}</div>
+                        <div class="text-xs text-stone-400 font-normal">${BNR_I18N.t('activeNamesCount', { count: active })}</div>
+                    </div>
+                    <span class="text-xs font-medium text-stone-700 bg-white px-2.5 py-1 rounded-lg border border-stone-200">Select →</span>
+                `;
+                btn.addEventListener('click', () => {
+                    selectSession(pickerTarget, s);
+                    closePicker();
+                });
+                list.appendChild(btn);
+            });
+        }
+
+        modalPicker.showModal();
+    }
+
+    function closePicker() {
+        modalPicker.close();
+    }
+
+    function selectSession(target, session) {
+        const catTranslated = BNR_I18N.t('cat' + session.category);
+        if (target === 'a') {
+            sessionA = session;
+            const label = document.getElementById('pick-a-label');
+            label.textContent = `${session.person} (${catTranslated}${session.round > 1 ? ` · R${session.round}` : ''})`;
+            document.getElementById('pick-a-btn').classList.remove('border-dashed');
+            document.getElementById('pick-a-btn').classList.add('border-stone-900', 'bg-stone-50/50');
+            document.getElementById('col-a-label').textContent = session.person;
+        } else {
+            sessionB = session;
+            const label = document.getElementById('pick-b-label');
+            label.textContent = `${session.person} (${catTranslated}${session.round > 1 ? ` · R${session.round}` : ''})`;
+            document.getElementById('pick-b-btn').classList.remove('border-dashed');
+            document.getElementById('pick-b-btn').classList.add('border-stone-900', 'bg-stone-50/50');
+            document.getElementById('col-b-label').textContent = session.person;
+        }
+
+        if (sessionA && sessionB) buildCombined();
+    }
+
+    // ── Data Merge & Consensus ───────────────────────────
+    function buildCombined() {
+        const nameMap = new Map();
+        deletedNames = new Set([...sessionA.deleted, ...sessionB.deleted]);
+
+        const addName = (name, rank, isA) => {
+            const key = name.toLowerCase();
+            if (!nameMap.has(key)) nameMap.set(key, { name, rankA: null, rankB: null });
+            const entry = nameMap.get(key);
+            if (isA) entry.rankA = rank;
+            else entry.rankB = rank;
+        };
+
+        sessionA.ranking.forEach((n, i) => addName(n, i + 1, true));
+        sessionB.ranking.forEach((n, i) => addName(n, i + 1, false));
+
+        const maxRank = Math.max(sessionA.ranking.length, sessionB.ranking.length) + 1;
+
+        combined = Array.from(nameMap.values()).map(entry => {
+            const rA = entry.rankA ?? maxRank;
+            const rB = entry.rankB ?? maxRank;
+            return {
+                name: entry.name,
+                rankA: entry.rankA,
+                rankB: entry.rankB,
+                avgRank: (rA + rB) / 2,
+                diff: Math.abs(rA - rB),
+            };
+        });
+
+        currentSort = { column: 'overall', direction: 'asc' };
+        searchQuery = '';
+        currentFilter = 'all';
+        document.getElementById('search-input').value = '';
+
+        document.getElementById('placeholder').classList.add('hidden');
+        document.getElementById('match-banner').classList.remove('hidden');
+        document.getElementById('controls').classList.remove('hidden');
+        document.getElementById('table-wrap').classList.remove('hidden');
+
+        updateMatchBanner();
+        renderTable();
+    }
+
+    function updateMatchBanner() {
+        const active = getSortedActive();
+        if (active.length > 0) {
+            const topMatch = active[0];
+            document.getElementById('top-match-name').textContent = topMatch.name;
+            const rA = topMatch.rankA != null ? `#${topMatch.rankA}` : '-';
+            const rB = topMatch.rankB != null ? `#${topMatch.rankB}` : '-';
+            document.getElementById('match-banner-desc').textContent =
+                `${sessionA.person}: ${rA} · ${sessionB.person}: ${rB} · Avg #${topMatch.avgRank}`;
+        }
+    }
+
+    document.getElementById('celebrate-btn').addEventListener('click', () => {
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (typeof confetti === 'function' && !prefersReducedMotion) {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        }
+        toast('✦ ' + BNR_I18N.t('statusTopMutual'));
+    });
+
+    // ── Filter & Sort ─────────────────────────────────────
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const key = th.dataset.sort;
+            if (currentSort.column === key) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = key;
+                currentSort.direction = 'asc';
+            }
+            renderTable();
+        });
+    });
+
+    document.getElementById('search-input').addEventListener('input', e => {
+        searchQuery = e.target.value.toLowerCase().trim();
+        renderTable();
+    });
+
+    document.querySelectorAll('.filter-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-tab').forEach(b => {
+                b.className = 'filter-tab px-3 py-1 rounded-lg bg-stone-100 text-stone-600 hover:bg-stone-200 transition-all font-medium';
+            });
+            btn.className = 'filter-tab px-3 py-1 rounded-lg bg-stone-900 text-stone-50 font-medium transition-all';
+
+            if (btn.id === 'filter-top') currentFilter = 'top';
+            else if (btn.id === 'filter-exact') currentFilter = 'exact';
+            else currentFilter = 'all';
+
+            renderTable();
+        });
+    });
+
+    function getSortedActive() {
+        let list = combined.filter(item => !deletedNames.has(item.name));
+        if (searchQuery) list = list.filter(item => item.name.toLowerCase().includes(searchQuery));
+
+        if (currentFilter === 'exact') {
+            list = list.filter(item => item.diff === 0 && item.rankA != null && item.rankB != null);
+        }
+
+        list.sort((a, b) => {
+            let cmp = 0;
+            if (currentSort.column === 'overall') {
+                cmp = a.avgRank !== b.avgRank ? a.avgRank - b.avgRank : a.diff - b.diff;
+            } else if (currentSort.column === 'name') {
+                cmp = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+            } else if (currentSort.column === 'rankA') {
+                cmp = (a.rankA ?? 999) - (b.rankA ?? 999);
+            } else if (currentSort.column === 'rankB') {
+                cmp = (a.rankB ?? 999) - (b.rankB ?? 999);
+            } else if (currentSort.column === 'diff') {
+                cmp = a.diff - b.diff;
+            }
+            return currentSort.direction === 'asc' ? cmp : -cmp;
+        });
+
+        if (currentFilter === 'top') {
+            list = list.slice(0, 5);
+        }
+
+        return list;
+    }
+
+    function updateSortIndicators() {
+        ['overall', 'name', 'rankA', 'rankB', 'diff'].forEach(col => {
+            const el = document.getElementById(`si-${col}`);
+            if (!el) return;
+            if (currentSort.column === col) {
+                el.textContent = currentSort.direction === 'asc' ? '▲' : '▼';
+                el.className = 'text-stone-900 font-bold';
+            } else {
+                el.textContent = '↕';
+                el.className = 'text-stone-300';
+            }
+        });
+    }
+
+    // ── Delete / Restore (2-Way Sync) ─────────────────────
+    function deleteName(name) {
+        deletedNames.add(name);
+
+        if (sessionA && !sessionA.deleted.includes(name) && sessionA.ranking.includes(name)) {
+            sessionA.deleted.push(name);
+            BNR.saveSession(sessionA);
+        }
+        if (sessionB && !sessionB.deleted.includes(name) && sessionB.ranking.includes(name)) {
+            sessionB.deleted.push(name);
+            BNR.saveSession(sessionB);
+        }
+
+        updateMatchBanner();
+        renderTable();
+        toast(`Removed "${name}"`);
+    }
+
+    function restoreName(name) {
+        deletedNames.delete(name);
+
+        if (sessionA) { sessionA.deleted = sessionA.deleted.filter(n => n !== name); BNR.saveSession(sessionA); }
+        if (sessionB) { sessionB.deleted = sessionB.deleted.filter(n => n !== name); BNR.saveSession(sessionB); }
+
+        updateMatchBanner();
+        renderTable();
+        toast(`Restored "${name}"`);
+    }
+
+    document.getElementById('restore-all-btn').addEventListener('click', () => {
+        deletedNames.clear();
+        if (sessionA) { sessionA.deleted = []; BNR.saveSession(sessionA); }
+        if (sessionB) { sessionB.deleted = []; BNR.saveSession(sessionB); }
+        updateMatchBanner();
+        renderTable();
+        toast(BNR_I18N.t('restoreAll'));
+    });
+
+    // Event delegation for table action buttons and deleted chips
+    document.getElementById('results-tbody').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action="delete"]');
+        if (btn && btn.dataset.name) {
+            deleteName(btn.dataset.name);
+        }
+    });
+
+    document.getElementById('deleted-chips').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action="restore"]');
+        if (btn && btn.dataset.name) {
+            restoreName(btn.dataset.name);
+        }
+    });
+
+    // ── Copy / Share Summary ─────────────────────────────
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+        const items = getSortedActive();
+        if (!items.length) { toast(BNR_I18N.t('noMutualNames')); return; }
+        const personA = sessionA ? sessionA.person : 'Partner 1';
+        const personB = sessionB ? sessionB.person : 'Partner 2';
+        
+        const header = `✦ ${personA} & ${personB} — ${BNR_I18N.t('consensusTitle')}:\n`;
+        const text = header + items.map((item, idx) =>
+            `${idx + 1}. ${item.name} (${personA}: #${item.rankA ?? '-'}, ${personB}: #${item.rankB ?? '-'})`
+        ).join('\n');
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `${personA} & ${personB} — ${BNR_I18N.t('consensusTitle')}`,
+                    text: text
+                });
+                toast(BNR_I18N.t('copiedSuccess'));
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+            }
+        }
+        navigator.clipboard.writeText(text).then(() => toast(BNR_I18N.t('copiedSuccess')));
+    });
+
+    // ── Render Table ──────────────────────────────────────
+    function renderTable() {
+        updateSortIndicators();
+        const items = getSortedActive();
+
+        const tbody = document.getElementById('results-tbody');
+        tbody.innerHTML = '';
+
+        if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-stone-400 font-normal">${BNR_I18N.t('noMutualNames')}</td></tr>`;
+        } else {
+            items.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-stone-50/70 transition-colors';
+
+                const rankAStr = item.rankA != null ? `<span class="font-mono text-xs text-stone-700 font-medium">#${item.rankA}</span>` : `<span class="text-stone-300 font-mono text-xs">—</span>`;
+                const rankBStr = item.rankB != null ? `<span class="font-mono text-xs text-stone-700 font-medium">#${item.rankB}</span>` : `<span class="text-stone-300 font-mono text-xs">—</span>`;
+
+                let diffHtml;
+                if (item.rankA != null && item.rankB != null) {
+                    if (item.diff === 0) {
+                        diffHtml = `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200/60 text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 w-max uppercase tracking-wider">${BNR_I18N.t('statusStrongAgree')}</span>`;
+                    } else if (item.diff <= 3) {
+                        diffHtml = `<span class="bg-stone-100 text-stone-700 text-[10px] font-medium px-2 py-0.5 rounded-md flex items-center gap-1 w-max">Δ ${item.diff} ${BNR_I18N.t('statusModerateAgree')}</span>`;
+                    } else {
+                        diffHtml = `<span class="bg-stone-50 text-stone-500 text-[10px] font-mono px-2 py-0.5 rounded-md">Δ ${item.diff}</span>`;
+                    }
+                } else {
+                    diffHtml = `<span class="text-stone-400 text-xs">—</span>`;
+                }
+
+                const rankNumber = String(index + 1).padStart(2, '0');
+                const isTop3 = currentSort.column === 'overall' && currentSort.direction === 'asc' && !searchQuery && currentFilter === 'all' && index < 3;
+                const rankBadge = isTop3
+                    ? `<span class="w-6 h-6 rounded-md bg-stone-900 text-stone-50 flex items-center justify-center font-mono text-[10px] font-semibold">${rankNumber}</span>`
+                    : `<span class="font-mono text-xs text-stone-400 ml-1">${rankNumber}</span>`;
+
+                const escapedName = BNR.escapeHtml(item.name);
+
+                tr.innerHTML = `
+                    <td class="p-3.5 align-middle">${rankBadge}</td>
+                    <td class="p-3.5 font-serif text-base text-stone-900">${escapedName}</td>
+                    <td class="p-3.5">${rankAStr}</td>
+                    <td class="p-3.5">${rankBStr}</td>
+                    <td class="p-3.5">${diffHtml}</td>
+                    <td class="p-3.5 text-right pr-4">
+                        <button data-action="delete" data-name="${escapedName}" class="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors" title="${BNR_I18N.t('delete')} ${escapedName}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Deleted bin
+        const deletedSection = document.getElementById('deleted-section');
+        const deletedChips = document.getElementById('deleted-chips');
+        const delCount = document.getElementById('del-count');
+
+        if (deletedNames.size > 0) {
+            deletedSection.classList.remove('hidden');
+            delCount.textContent = `(${deletedNames.size})`;
+            deletedChips.innerHTML = '';
+            deletedNames.forEach(name => {
+                const escapedName = BNR.escapeHtml(name);
+                const chip = document.createElement('div');
+                chip.className = 'inline-flex items-center gap-1.5 bg-white border border-stone-200 px-2.5 py-1 rounded-lg text-xs font-medium shadow-sm';
+                chip.innerHTML = `
+                    <span class="line-through text-stone-400 font-serif">${escapedName}</span>
+                    <button data-action="restore" data-name="${escapedName}" class="text-stone-700 hover:text-stone-900 ml-1 font-sans text-[11px] underline">${BNR_I18N.t('restore')}</button>
+                `;
+                deletedChips.appendChild(chip);
+            });
+        } else {
+            deletedSection.classList.add('hidden');
+        }
+    }
+
+    window.addEventListener('bnr:languagechange', () => {
+        mountLanguageSwitcher();
+        if (sessionA) selectSession('a', sessionA);
+        if (sessionB) selectSession('b', sessionB);
+        if (sessionA && sessionB) renderTable();
+    });
+
+    // ── Auto-load from URL params ─────────────────────────
+    (function autoLoad() {
+        const params = new URLSearchParams(location.search);
+        const idA = params.get('a');
+        const idB = params.get('b');
+        if (idA) {
+            const s = BNR.getSession(idA);
+            if (s && s.status === 'ranked') selectSession('a', s);
+        }
+        if (idB) {
+            const s = BNR.getSession(idB);
+            if (s && s.status === 'ranked') selectSession('b', s);
+        }
+    })();
+</script>
+</body>
+</html>
