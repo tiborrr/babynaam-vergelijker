@@ -13,12 +13,9 @@ PUBLIC_DIR="${REMOTE_DIR}/public"
 
 SSH_OPTS="ssh -o RemoteCommand=none -o RequestTTY=no"
 
-echo "🎨 Compiling static Tailwind CSS for production..."
-npx tailwindcss@3 -i css/tailwind-input.css -o css/tailwind.css --minify
-
-echo "🧪 Running Automated Translation & Logic Audit..."
-node validate-translations.js
-node test-suite.js
+echo "🎨 Building static assets & running tests..."
+npm run build
+npm test
 
 echo "🚀 Deploying Baby Name Ranker to https://baby.casteleijn.com ..."
 

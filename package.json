@@ -1,0 +1,21 @@
+{
+  "name": "babynaam-vergelijker",
+  "version": "2.4.0",
+  "description": "Pairwise head-to-head baby name ranker & partner consensus app",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i css/tailwind-input.css -o css/tailwind.css --minify",
+    "build": "npm run build:css",
+    "test:i18n": "node validate-translations.js",
+    "test:unit": "node test-suite.js",
+    "test": "npm run test:i18n && npm run test:unit",
+    "deploy": "./deploy.sh"
+  },
+  "devDependencies": {
+    "canvas-confetti": "^1.9.3",
+    "tailwindcss": "^3.4.17"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
