@@ -753,12 +753,12 @@
                 const topNames = isRanked ? s.ranking.filter(n => !s.deleted.includes(n)).slice(0, 5) : [];
 
                 card.innerHTML = `
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex items-center gap-3.5 min-w-0">
-                            <label class="relative flex items-center justify-center cursor-pointer">
-                                <input type="checkbox" class="session-checkbox w-4 h-4 accent-stone-900 flex-shrink-0 cursor-pointer rounded border-stone-300" data-id="${BNR.escapeHtml(s.id)}" title="Select for comparison">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-start sm:items-center gap-3 min-w-0">
+                            <label class="relative flex items-center justify-center cursor-pointer mt-0.5 sm:mt-0 flex-shrink-0">
+                                <input type="checkbox" class="session-checkbox w-4 h-4 accent-stone-900 cursor-pointer rounded border-stone-300" data-id="${BNR.escapeHtml(s.id)}" title="Select for comparison">
                             </label>
-                            <div class="min-w-0">
+                            <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <h4 class="font-serif text-lg font-medium text-stone-900">${BNR.escapeHtml(sessionLabel(s))}</h4>
                                     ${s.parentId ? `<span class="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded-md font-semibold uppercase tracking-wider">${BNR_I18N.t('roundBadge', { round: s.round })}</span>` : ''}
@@ -770,17 +770,20 @@
                                     ${BNR_I18N.t('activeNamesCount', { count: active })}${deleted > 0 ? ` · ${deleted} ${BNR_I18N.t('removedNamesTitle').toLowerCase()}` : ''} · ${formatDate(s.updatedAt)}
                                 </p>
                             </div>
+                            <button data-action="delete" data-id="${BNR.escapeHtml(s.id)}" class="action-btn sm:hidden text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors flex-shrink-0 ml-auto" title="${BNR_I18N.t('delete')}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
                         </div>
-                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                        <div class="flex items-center gap-2 pt-2 sm:pt-0 border-t border-stone-100 sm:border-t-0 sm:flex-shrink-0">
                             ${isRanked ? `
-                            <button data-action="rerank" data-id="${BNR.escapeHtml(s.id)}" class="action-btn text-xs bg-stone-50 hover:bg-stone-100 text-stone-700 px-3 py-1.5 rounded-lg font-medium transition-all active:scale-[0.98] border border-stone-200/80" title="${BNR_I18N.t('rerank')}">
+                            <button data-action="rerank" data-id="${BNR.escapeHtml(s.id)}" class="action-btn flex-1 sm:flex-initial text-xs bg-stone-50 hover:bg-stone-100 text-stone-700 px-3.5 py-2 sm:py-1.5 rounded-lg font-medium transition-all active:scale-[0.98] border border-stone-200/80 text-center" title="${BNR_I18N.t('rerank')}">
                                 ${BNR_I18N.t('rerank')}
                             </button>
                             ` : ''}
-                            <button data-action="open" data-id="${BNR.escapeHtml(s.id)}" class="action-btn text-xs bg-stone-900 hover:bg-stone-800 text-stone-50 px-3.5 py-1.5 rounded-lg font-medium transition-all active:scale-[0.98] shadow-sm">
+                            <button data-action="open" data-id="${BNR.escapeHtml(s.id)}" class="action-btn flex-1 sm:flex-initial text-xs bg-stone-900 hover:bg-stone-800 text-stone-50 px-4 py-2 sm:py-1.5 rounded-lg font-medium transition-all active:scale-[0.98] shadow-sm text-center">
                                 ${isRanked ? BNR_I18N.t('viewResultsBtn') : BNR_I18N.t('continueBtn')}
                             </button>
-                            <button data-action="delete" data-id="${BNR.escapeHtml(s.id)}" class="action-btn text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors" title="${BNR_I18N.t('delete')}">
+                            <button data-action="delete" data-id="${BNR.escapeHtml(s.id)}" class="action-btn hidden sm:flex text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors" title="${BNR_I18N.t('delete')}">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             </button>
                         </div>
