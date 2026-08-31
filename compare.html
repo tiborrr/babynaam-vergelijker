@@ -19,8 +19,8 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
-    <script src="storage.js?v=2.2"></script>
-    <script src="i18n.js?v=2.2"></script>
+    <script src="storage.js?v=2.3"></script>
+    <script src="i18n.js?v=2.3"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -167,15 +167,20 @@
     </div>
 
     <!-- Celebration & Highlights Box -->
-    <div id="match-banner" class="hidden mb-6 bg-white p-6 rounded-2xl border border-stone-200/80 shadow-[0_2px_8px_-2px_rgba(40,30,20,0.03)]">
-        <div>
-            <div class="flex items-center gap-2 mb-1">
-                <span data-i18n="statusTopMutual" class="text-[10px] font-semibold uppercase tracking-widest text-stone-500 bg-stone-100 px-2.5 py-0.5 rounded-md">Top Consensus Match</span>
+    <div id="match-banner" class="hidden mb-6 bg-white p-6 rounded-2xl border border-stone-200/80 shadow-[0_2px_8px_-2px_rgba(40,30,20,0.03)] cursor-pointer hover:border-stone-300 transition-all select-none group relative overflow-hidden" title="Click for celebration confetti!">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span data-i18n="statusTopMutual" class="text-[10px] font-semibold uppercase tracking-widest text-stone-500 bg-stone-100 px-2.5 py-0.5 rounded-md">Top Consensus Match</span>
+                </div>
+                <h3 id="match-banner-title" class="font-serif italic text-2xl sm:text-3xl text-stone-900 mt-1">
+                    #1 <span id="top-match-name" class="font-normal not-italic underline decoration-stone-300 underline-offset-4">...</span>
+                </h3>
+                <p id="match-banner-desc" class="text-xs text-stone-500 mt-1">Calculated from individual rankings.</p>
             </div>
-            <h3 id="match-banner-title" class="font-serif italic text-2xl sm:text-3xl text-stone-900 mt-1">
-                #1 <span id="top-match-name" class="font-normal not-italic underline decoration-stone-300 underline-offset-4">...</span>
-            </h3>
-            <p id="match-banner-desc" class="text-xs text-stone-500 mt-1">Calculated from individual rankings.</p>
+            <div class="text-xl sm:text-2xl opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all text-amber-600 flex-shrink-0" aria-hidden="true">
+                ✨
+            </div>
         </div>
     </div>
 
@@ -392,11 +397,15 @@
         updateMatchBanner();
         renderTable();
 
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (typeof confetti === 'function' && !prefersReducedMotion && combined.length > 0) {
+        if (typeof confetti === 'function' && combined.length > 0) {
             setTimeout(() => {
-                confetti({ particleCount: 80, spread: 65, origin: { y: 0.6 } });
-            }, 300);
+                confetti({
+                    particleCount: 80,
+                    spread: 65,
+                    origin: { y: 0.6 },
+                    zIndex: 9999
+                });
+            }, 350);
         }
     }
 
@@ -411,6 +420,17 @@
                 `${sessionA.person}: ${rA} · ${sessionB.person}: ${rB} · Avg #${topMatch.avgRank}`;
         }
     }
+
+    document.getElementById('match-banner').addEventListener('click', () => {
+        if (typeof confetti === 'function') {
+            confetti({
+                particleCount: 90,
+                spread: 70,
+                origin: { y: 0.6 },
+                zIndex: 9999
+            });
+        }
+    });
 
     // ── Filter & Sort ─────────────────────────────────────
     document.querySelectorAll('th[data-sort]').forEach(th => {
