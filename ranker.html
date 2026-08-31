@@ -19,9 +19,9 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" crossorigin="anonymous"></script>
-    <script src="storage.js?v=2.1"></script>
-    <script src="similar-names.js?v=2.1"></script>
-    <script src="i18n.js?v=2.1"></script>
+    <script src="storage.js?v=2.2"></script>
+    <script src="similar-names.js?v=2.2"></script>
+    <script src="i18n.js?v=2.2"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -130,7 +130,7 @@
 </div>
 
 <!-- ── Results State ─────────────────────────────────── -->
-<div id="results-state" role="region" aria-label="Ranking Results" class="hidden min-h-screen p-4 sm:p-6 max-w-lg mx-auto flex flex-col pb-36">
+<div id="results-state" role="region" aria-label="Ranking Results" class="hidden min-h-screen p-4 sm:p-6 max-w-lg mx-auto flex flex-col pb-48">
 
     <div class="mt-2 mb-6 flex items-center justify-between gap-2">
         <a href="./" class="inline-flex items-center gap-1 text-xs font-medium text-stone-600 hover:text-stone-900 bg-white px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all">
@@ -178,7 +178,7 @@
     </div>
 
     <!-- Floating Sticky Bottom Actions -->
-    <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#FAF8F5] via-[#FAF8F5]/95 to-transparent flex justify-center z-40">
+    <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#FAF8F5] via-[#FAF8F5]/95 to-transparent flex justify-center z-10">
         <div class="w-full max-w-lg flex gap-2.5">
             <button id="rerank-btn" class="flex-1 bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium py-3 rounded-xl shadow-md active:scale-[0.99] transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5">
                 <span id="rerank-btn-text" data-i18n="rerankRemainingBtn">Re-rank Remaining Favorites →</span>
@@ -191,9 +191,9 @@
 </div>
 
 <!-- ── Variations Modal ──────────────────────────────── -->
-<dialog id="modal-variations" class="bg-transparent p-3 sm:p-4 max-w-md w-full outline-none m-auto">
+<dialog id="modal-variations" class="z-50 bg-transparent p-3 sm:p-4 max-w-md w-full outline-none m-auto">
     <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-7 flex flex-col gap-4 border border-stone-200/80">
-        <div class="flex items-center justify-between pb-1 border-b border-stone-100">
+        <div class="flex items-center justify-between pb-1 border-b border-stone-100 bg-white relative z-10">
             <div>
                 <h2 id="variations-title" class="font-serif italic text-2xl text-stone-900 tracking-tight">Similar Variations</h2>
                 <p data-i18n="variationsModalSub" class="text-xs text-stone-500 mt-0.5">Select variations to add them to your list.</p>
