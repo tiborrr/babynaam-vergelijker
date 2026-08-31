@@ -32,6 +32,9 @@
             clearAll: 'Clear All',
             startRanking: 'Start Ranking',
             undoChoice: 'Undo Choice',
+            discardName: 'Discard',
+            discardBoth: 'Discard both',
+            nameDiscardedToast: '🗑️ Removed "{name}"',
             keyboardHint: 'Press 1 or 2 to choose · Space to undo',
 
             // Categories
@@ -175,6 +178,9 @@
             clearAll: 'Alles Wissen',
             startRanking: 'Start met Kiezen',
             undoChoice: 'Keuze Ongedaan Maken',
+            discardName: 'Wegdoen',
+            discardBoth: 'Beide wegdoen',
+            nameDiscardedToast: '🗑️ "{name}" verwijderd',
             keyboardHint: 'Druk 1 of 2 om te kiezen · Spatie voor herstel',
 
             // Categories
@@ -318,6 +324,9 @@
             clearAll: 'Tout effacer',
             startRanking: 'Commencer le classement',
             undoChoice: 'Annuler le choix',
+            discardName: 'Retirer',
+            discardBoth: 'Retirer les deux',
+            nameDiscardedToast: '🗑️ "{name}" retiré',
             keyboardHint: 'Appuyez sur 1 ou 2 · Espace pour annuler',
 
             // Categories
@@ -461,6 +470,9 @@
             clearAll: 'Borrar todo',
             startRanking: 'Comenzar a Elegir',
             undoChoice: 'Deshacer Selección',
+            discardName: 'Descartar',
+            discardBoth: 'Descartar ambos',
+            nameDiscardedToast: '🗑️ "{name}" descartado',
             keyboardHint: 'Pulsa 1 o 2 para elegir · Espacio para deshacer',
 
             // Categories
@@ -604,6 +616,9 @@
             clearAll: 'Alles leeren',
             startRanking: 'Auswahl starten',
             undoChoice: 'Schritt zurück',
+            discardName: 'Wegwerfen',
+            discardBoth: 'Beide wegwerfen',
+            nameDiscardedToast: '🗑️ "{name}" aussortiert',
             keyboardHint: 'Drücke 1 oder 2 · Leertaste für zurück',
 
             // Categories
@@ -747,6 +762,9 @@
             clearAll: 'مسح الكل',
             startRanking: 'بدء الترتيب',
             undoChoice: 'تراجع عن الاختيار',
+            discardName: 'استبعاد',
+            discardBoth: 'استبعاد الاثنين',
+            nameDiscardedToast: '🗑️ تم استبعاد "{name}"',
             keyboardHint: 'اضغط 1 أو 2 للاختيار · مسافة للتراجع',
 
             // Categories

@@ -102,6 +102,63 @@
         if (['ArrowRight', 'ArrowDown', '2'].includes(e.key)) handleChoice(1);
     });
 
+    let currentCandidateA = null;
+    let currentCandidateB = null;
+
+    function discardCandidate(nameToRemove) {
+        if (!nameToRemove) return;
+        const toRemove = Array.isArray(nameToRemove) ? nameToRemove : [nameToRemove];
+
+        toRemove.forEach(name => {
+            if (!session.deleted.includes(name)) {
+                session.deleted.push(name);
+            }
+            session.names = session.names.filter(n => n !== name);
+            session.ranking = session.ranking.filter(n => n !== name);
+            initialShuffled = initialShuffled.filter(n => n !== name);
+        });
+
+        BNR.saveSession(session);
+
+        if (toRemove.length === 1) {
+            toast(BNR_I18N.t('nameDiscardedToast', { name: toRemove[0] }));
+        } else {
+            toast(BNR_I18N.t('nameDiscardedToast', { name: `${toRemove[0]} & ${toRemove[1]}` }));
+        }
+
+        // If 0 or 1 name left, show results immediately
+        if (initialShuffled.length <= 1) {
+            session.ranking = [...initialShuffled];
+            session.status = 'ranked';
+            BNR.saveSession(session);
+            document.getElementById('comparison-state').classList.add('hidden');
+            showResults(true);
+            return;
+        }
+
+        // Reset choice history and start fresh on the filtered list
+        estimatedTotal = calcMaxComparisons(initialShuffled.length);
+        choiceHistory = [];
+        runMergeSortFromHistory();
+    }
+
+    document.getElementById('discard-a-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentCandidateA) discardCandidate(currentCandidateA);
+    });
+
+    document.getElementById('discard-b-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentCandidateB) discardCandidate(currentCandidateB);
+    });
+
+    document.getElementById('discard-both-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentCandidateA && currentCandidateB) {
+            discardCandidate([currentCandidateA, currentCandidateB]);
+        }
+    });
+
     // Undo functionality
     document.getElementById('undo-btn').addEventListener('click', () => {
         if (choiceHistory.length === 0) return;
@@ -145,6 +202,8 @@
             }
 
             // Interactive prompt for new choice
+            currentCandidateA = a;
+            currentCandidateB = b;
             btnAName.textContent = a;
             btnBName.textContent = b;
             updateProgress();
