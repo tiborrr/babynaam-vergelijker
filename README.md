@@ -3,6 +3,8 @@
 > **Head-to-head pairwise comparison tool for couples to agree on baby names without the arguments.**
 
 [![Live Demo](https://img.shields.io/badge/Demo-baby.casteleijn.com-1C1815?style=flat-square&logo=google-chrome&logoColor=white)](https://baby.casteleijn.com)
+[![GitHub Pages Preview](https://img.shields.io/badge/Preview-GitHub%20Pages-24292e?style=flat-square&logo=github)](https://tiborrr.github.io/babynaam-vergelijker/)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/tiborrr/babynaam-vergelijker/deploy-pages.yml?branch=main&style=flat-square&label=Tests%20%26%20Deploy)](https://github.com/tiborrr/babynaam-vergelijker/actions)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20First-emerald?style=flat-square)](https://baby.casteleijn.com)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero%20Build%20Step-stone?style=flat-square)](https://baby.casteleijn.com)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
