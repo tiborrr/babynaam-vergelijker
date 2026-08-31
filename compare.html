@@ -167,7 +167,7 @@
     </div>
 
     <!-- Celebration & Highlights Box -->
-    <div id="match-banner" class="hidden mb-6 bg-white p-6 rounded-2xl border border-stone-200/80 shadow-[0_2px_8px_-2px_rgba(40,30,20,0.03)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div id="match-banner" class="hidden mb-6 bg-white p-6 rounded-2xl border border-stone-200/80 shadow-[0_2px_8px_-2px_rgba(40,30,20,0.03)]">
         <div>
             <div class="flex items-center gap-2 mb-1">
                 <span data-i18n="statusTopMutual" class="text-[10px] font-semibold uppercase tracking-widest text-stone-500 bg-stone-100 px-2.5 py-0.5 rounded-md">Top Consensus Match</span>
@@ -177,9 +177,6 @@
             </h3>
             <p id="match-banner-desc" class="text-xs text-stone-500 mt-1">Calculated from individual rankings.</p>
         </div>
-        <button id="celebrate-btn" class="bg-stone-900 hover:bg-stone-800 text-stone-50 text-xs font-medium px-4 py-2 rounded-xl shadow-sm transition-all active:scale-95 flex-shrink-0 flex items-center gap-1.5">
-            <span>Celebrate ✦</span>
-        </button>
     </div>
 
     <!-- Filter & Sort Controls -->
@@ -394,6 +391,13 @@
 
         updateMatchBanner();
         renderTable();
+
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (typeof confetti === 'function' && !prefersReducedMotion && combined.length > 0) {
+            setTimeout(() => {
+                confetti({ particleCount: 80, spread: 65, origin: { y: 0.6 } });
+            }, 300);
+        }
     }
 
     function updateMatchBanner() {
@@ -407,14 +411,6 @@
                 `${sessionA.person}: ${rA} · ${sessionB.person}: ${rB} · Avg #${topMatch.avgRank}`;
         }
     }
-
-    document.getElementById('celebrate-btn').addEventListener('click', () => {
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (typeof confetti === 'function' && !prefersReducedMotion) {
-            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        }
-        toast('✦ ' + BNR_I18N.t('statusTopMutual'));
-    });
 
     // ── Filter & Sort ─────────────────────────────────────
     document.querySelectorAll('th[data-sort]').forEach(th => {
