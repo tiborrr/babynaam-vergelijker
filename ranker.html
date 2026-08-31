@@ -157,6 +157,12 @@
     <!-- Ranked List Cards -->
     <div class="bg-white rounded-2xl shadow-sm border border-stone-200/80 overflow-hidden mb-6">
         <ul id="results-list" class="divide-y divide-stone-100"></ul>
+        <div class="p-3 bg-stone-50 border-t border-stone-100">
+            <form id="manual-add-form" class="flex gap-2">
+                <input type="text" id="manual-add-input" class="flex-1 bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-stone-900" data-i18n="addNamePlaceholder" placeholder="Type a name to add...">
+                <button type="submit" id="manual-add-btn" class="bg-stone-900 text-stone-50 px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors shadow-sm" data-i18n="addNameBtn">Add</button>
+            </form>
+        </div>
     </div>
 
     <!-- Deleted Names Bin -->
@@ -175,7 +181,7 @@
     <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#FAF8F5] via-[#FAF8F5]/95 to-transparent flex justify-center z-40">
         <div class="w-full max-w-lg flex gap-2.5">
             <button id="rerank-btn" class="flex-1 bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium py-3 rounded-xl shadow-md active:scale-[0.99] transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5">
-                <span data-i18n="rerankRemainingBtn">Re-rank Remaining Favorites →</span>
+                <span id="rerank-btn-text" data-i18n="rerankRemainingBtn">Re-rank Remaining Favorites →</span>
             </button>
             <a href="./" data-i18n="dashboard" class="bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 font-medium py-3 px-5 rounded-xl shadow-sm active:scale-[0.99] transition-all text-xs sm:text-sm text-center flex items-center justify-center">
                 Dashboard
@@ -190,18 +196,12 @@
         <div class="flex items-center justify-between pb-1 border-b border-stone-100">
             <div>
                 <h2 id="variations-title" class="font-serif italic text-2xl text-stone-900 tracking-tight">Similar Variations</h2>
-                <p data-i18n="variationsModalSub" class="text-xs text-stone-500 mt-0.5">Select variations to add and start a new ranking round.</p>
+                <p data-i18n="variationsModalSub" class="text-xs text-stone-500 mt-0.5">Select variations to add them to your list.</p>
             </div>
             <button id="variations-modal-close" type="button" aria-label="Close modal" class="w-7 h-7 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center text-lg transition-colors">&times;</button>
         </div>
 
         <div id="variations-list" class="flex flex-wrap gap-2 py-2 max-h-60 overflow-y-auto"></div>
-
-        <div class="flex flex-col gap-2 pt-2 border-t border-stone-100">
-            <button id="btn-start-variations-rerank" type="button" class="w-full bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium py-3 rounded-xl transition-all active:scale-[0.99] text-xs sm:text-sm shadow-sm flex items-center justify-center gap-1.5">
-                <span id="btn-start-variations-text">Start Round with Variations →</span>
-            </button>
-        </div>
     </div>
 </dialog>
 
@@ -231,6 +231,7 @@
     const sessionId = params.get('session');
 
     let session = sessionId ? BNR.getSession(sessionId) : null;
+    let pendingAdditions = [];
 
     if (!session) {
         document.getElementById('error-state').classList.remove('hidden');
@@ -473,6 +474,25 @@
         window.location.href = `ranker.html?session=${encodeURIComponent(child.id)}`;
     });
 
+    // ── Manual Add Form ────────────────────────────────
+    document.getElementById('manual-add-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('manual-add-input');
+        const name = input.value.trim();
+        if (!name) return;
+        
+        const active = session.ranking.filter(n => !session.deleted.includes(n));
+        if (active.includes(name) || pendingAdditions.includes(name)) {
+            toast('Name already in list');
+            return;
+        }
+        
+        pendingAdditions.push(name);
+        input.value = '';
+        renderResults();
+        toast(BNR_I18N.t('addedToNextRound'));
+    });
+
     // ── Variations Modal Logic ──────────────────────────────
     const modalVariations = document.getElementById('modal-variations');
     document.getElementById('variations-modal-close').addEventListener('click', () => modalVariations.close());
@@ -480,76 +500,53 @@
     function openVariationsModal(baseName) {
         const titleEl = document.getElementById('variations-title');
         const listEl = document.getElementById('variations-list');
-        const btnSubmit = document.getElementById('btn-start-variations-rerank');
-        const btnText = document.getElementById('btn-start-variations-text');
 
         titleEl.textContent = BNR_I18N.t('variationsModalTitle', { name: baseName });
         listEl.innerHTML = '';
 
         const active = session.ranking.filter(n => !session.deleted.includes(n));
+        const exclude = [...active, ...pendingAdditions];
         const variations = BNR.findSimilarNames(baseName, {
             limit: 10,
             category: session.category,
-            exclude: active
+            exclude: exclude
         });
 
         if (variations.length === 0) {
             listEl.innerHTML = `<p class="text-xs text-stone-400 py-3 text-center w-full">${BNR_I18N.t('noVariationsFound')}</p>`;
-            btnSubmit.classList.add('hidden');
             modalVariations.showModal();
             return;
         }
 
-        btnSubmit.classList.remove('hidden');
-        const selectedVariations = new Set();
-
-        function updateBtn() {
-            const total = active.length + selectedVariations.size;
-            btnText.textContent = BNR_I18N.t('startRerankWithVariations', {
-                round: (session.round || 1) + 1,
-                count: total
-            });
-        }
-
         variations.forEach(item => {
-            const label = document.createElement('label');
-            label.className = 'inline-flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 px-3 py-2 rounded-xl text-xs font-medium text-stone-800 cursor-pointer select-none transition-all has-[:checked]:bg-stone-900 has-[:checked]:text-stone-50 has-[:checked]:border-stone-900 shadow-sm';
-            label.innerHTML = `
-                <input type="checkbox" value="${BNR.escapeHtml(item.name)}" class="hidden variation-check">
-                <span>+ ${BNR.escapeHtml(item.name)}</span>
-            `;
-            const chk = label.querySelector('input');
-            chk.addEventListener('change', () => {
-                if (chk.checked) {
-                    selectedVariations.add(item.name);
-                } else {
-                    selectedVariations.delete(item.name);
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'inline-flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 px-3 py-2 rounded-xl text-xs font-medium text-stone-800 transition-colors shadow-sm';
+            btn.innerHTML = `<span>+ ${BNR.escapeHtml(item.name)}</span>`;
+            btn.onclick = () => {
+                pendingAdditions.push(item.name);
+                renderResults();
+                toast(BNR_I18N.t('addedToNextRound'));
+                btn.remove();
+                if (listEl.children.length === 0) {
+                    modalVariations.close();
                 }
-                updateBtn();
-            });
-            listEl.appendChild(label);
+            };
+            listEl.appendChild(btn);
         });
 
-        updateBtn();
-
-        btnSubmit.onclick = () => {
-            const combined = [...active, ...Array.from(selectedVariations)];
-            if (combined.length < 2) {
-                toast(BNR_I18N.t('minNamesAlert'));
-                return;
-            }
-            const child = BNR.createSession({
-                person: session.person,
-                category: session.category,
-                names: combined
-            });
-            child.parentId = session.id;
-            child.round = (session.round || 1) + 1;
-            BNR.saveSession(child);
-            window.location.href = `ranker.html?session=${encodeURIComponent(child.id)}`;
-        };
-
         modalVariations.showModal();
+    }
+
+    function updateRerankBtn() {
+        const activeCount = session.ranking.filter(n => !session.deleted.includes(n)).length;
+        const total = activeCount + pendingAdditions.length;
+        const btnText = document.getElementById('rerank-btn-text');
+        if (pendingAdditions.length > 0) {
+            btnText.textContent = BNR_I18N.t('startRerankWithVariations', { round: (session.round || 1) + 1, count: total });
+        } else {
+            btnText.textContent = BNR_I18N.t('rerankRemainingBtn');
+        }
     }
 
     function renderResults() {
@@ -586,6 +583,29 @@
             `;
             list.appendChild(li);
         });
+
+        if (pendingAdditions.length > 0) {
+            pendingAdditions.forEach(name => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between p-3.5 sm:p-4 bg-amber-50/50 hover:bg-amber-50 transition-colors';
+                const escapedName = BNR.escapeHtml(name);
+                li.innerHTML = `
+                    <div class="flex items-center min-w-0">
+                        <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-amber-100 text-amber-700 rounded-lg font-mono text-xs font-semibold mr-3.5">✨</span>
+                        <span class="font-serif text-lg sm:text-xl font-normal text-stone-900 truncate tracking-tight">${escapedName}</span>
+                        <span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-200 text-amber-800 uppercase tracking-widest">${BNR_I18N.t('newBadge')}</span>
+                    </div>
+                    <div class="flex items-center gap-1 ml-2 flex-shrink-0">
+                        <button data-action="delete-pending" data-name="${escapedName}" class="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors" title="Delete ${escapedName}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+        
+        updateRerankBtn();
 
         // Deleted bin
         const deletedSection = document.getElementById('deleted-section');
