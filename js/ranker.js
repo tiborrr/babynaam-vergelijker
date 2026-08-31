@@ -54,12 +54,28 @@
         }, duration);
     }
 
-    // ── Ranking Engine with Undo Support ──────────────────
+    // ── Ranking Engine with Pairwise Preference Memoization & Undo ──────
     let resolveClick = null;
     let comparisonsMade = 0;
     let estimatedTotal = 0;
-    let choiceHistory = [];
+    let pairwisePreferences = new Map(); // Key: "nameA|||nameB" -> -1 (prefer A) or 1 (prefer B)
+    let undoStack = []; // [{ a: 'Noah', b: 'Liam', pref: -1 }]
     let initialShuffled = null;
+
+    function getKnownPreference(a, b) {
+        if (pairwisePreferences.has(`${a}|||${b}`)) {
+            return pairwisePreferences.get(`${a}|||${b}`);
+        }
+        if (pairwisePreferences.has(`${b}|||${a}`)) {
+            return -pairwisePreferences.get(`${b}|||${a}`);
+        }
+        return null;
+    }
+
+    function recordPreference(a, b, pref) {
+        pairwisePreferences.set(`${a}|||${b}`, pref);
+        undoStack.push({ a, b, pref });
+    }
 
     function calcMaxComparisons(len) {
         if (len <= 1) return 0;
@@ -76,7 +92,7 @@
         document.getElementById('progress-bar').style.width = `${pct}%`;
 
         const undoBtn = document.getElementById('undo-btn');
-        if (choiceHistory.length > 0) {
+        if (undoStack.length > 0) {
             undoBtn.classList.remove('hidden');
         } else {
             undoBtn.classList.add('hidden');
@@ -84,8 +100,8 @@
     }
 
     function handleChoice(preference) {
-        if (!resolveClick) return;
-        choiceHistory.push(preference);
+        if (!resolveClick || !currentCandidateA || !currentCandidateB) return;
+        recordPreference(currentCandidateA, currentCandidateB, preference);
         const resolve = resolveClick;
         resolveClick = null;
         comparisonsMade++;
@@ -116,6 +132,14 @@
             session.names = session.names.filter(n => n !== name);
             session.ranking = session.ranking.filter(n => n !== name);
             initialShuffled = initialShuffled.filter(n => n !== name);
+
+            // Clean up comparisons involving discarded name
+            for (const key of Array.from(pairwisePreferences.keys())) {
+                if (key.startsWith(`${name}|||`) || key.endsWith(`|||${name}`)) {
+                    pairwisePreferences.delete(key);
+                }
+            }
+            undoStack = undoStack.filter(item => item.a !== name && item.b !== name);
         });
 
         BNR.saveSession(session);
@@ -136,9 +160,8 @@
             return;
         }
 
-        // Reset choice history and start fresh on the filtered list
+        // Re-run tournament seamlessly: all existing choices for remaining names are automatically preserved
         estimatedTotal = calcMaxComparisons(initialShuffled.length);
-        choiceHistory = [];
         runMergeSortFromHistory();
     }
 
@@ -161,8 +184,10 @@
 
     // Undo functionality
     document.getElementById('undo-btn').addEventListener('click', () => {
-        if (choiceHistory.length === 0) return;
-        choiceHistory.pop(); // remove last decision
+        if (undoStack.length === 0) return;
+        const last = undoStack.pop();
+        pairwisePreferences.delete(`${last.a}|||${last.b}`);
+        pairwisePreferences.delete(`${last.b}|||${last.a}`);
         runMergeSortFromHistory();
         toast('↩ Undid choice');
     });
@@ -188,17 +213,16 @@
 
     async function runMergeSortFromHistory() {
         comparisonsMade = 0;
-        let playbackIndex = 0;
 
         const btnAName = document.getElementById('btn-a-name');
         const btnBName = document.getElementById('btn-b-name');
 
         const sorted = await mergeSort([...initialShuffled], async (a, b) => {
-            if (playbackIndex < choiceHistory.length) {
-                // Replay historical choice
-                const recordedChoice = choiceHistory[playbackIndex++];
+            const known = getKnownPreference(a, b);
+            if (known !== null) {
+                // Instantly and silently reuse existing decision without asking user again
                 comparisonsMade++;
-                return recordedChoice;
+                return known;
             }
 
             // Interactive prompt for new choice
@@ -229,7 +253,8 @@
         }
         initialShuffled = arr;
         estimatedTotal = calcMaxComparisons(arr.length);
-        choiceHistory = [];
+        pairwisePreferences = new Map();
+        undoStack = [];
 
         document.getElementById('comparison-state').classList.remove('hidden');
         updateProgress();
