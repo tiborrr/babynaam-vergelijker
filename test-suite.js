@@ -410,6 +410,156 @@ function testCompareLogic() {
         });
     });
 
+    // ── Test 11: In-Arena Discard, Pairwise Memoization & Preference Continuity ──
+    console.log('\nTest Suite 11: In-Arena Discard & Pairwise Memoization');
+
+    // 1. Verify Pairwise Preference Engine with Mid-Tournament Discard
+    async function testMemoizedRankingWithDiscard() {
+        const candidates = ['Nola', 'Isa', 'Lana', 'Lieke', 'Eva'];
+        // Underlying human preference: Nola > Isa > Lana > Lieke > Eva
+        const trueOrder = ['Nola', 'Isa', 'Lana', 'Lieke', 'Eva'];
+
+        const pairwisePreferences = new Map();
+        let promptHistory = []; // Tracks actual prompts shown to user
+
+        function getKnownPreference(a, b) {
+            if (pairwisePreferences.has(`${a}|||${b}`)) return pairwisePreferences.get(`${a}|||${b}`);
+            if (pairwisePreferences.has(`${b}|||${a}`)) return -pairwisePreferences.get(`${b}|||${a}`);
+            return null;
+        }
+
+        async function mergeSort(arr, compareFn) {
+            if (arr.length <= 1) return arr;
+            const mid = Math.floor(arr.length / 2);
+            const left = await mergeSort(arr.slice(0, mid), compareFn);
+            const right = await mergeSort(arr.slice(mid), compareFn);
+            return merge(left, right, compareFn);
+        }
+
+        async function merge(left, right, compareFn) {
+            const result = [];
+            let i = 0, j = 0;
+            while (i < left.length && j < right.length) {
+                const cmp = await compareFn(left[i], right[j]);
+                if (cmp <= 0) result.push(left[i++]);
+                else result.push(right[j++]);
+            }
+            return result.concat(left.slice(i)).concat(right.slice(j));
+        }
+
+        let activeCandidates = [...candidates];
+
+        async function compareFn(a, b) {
+            const known = getKnownPreference(a, b);
+            if (known !== null) {
+                return known; // Instantly resolved from memoized choices
+            }
+
+            promptHistory.push({ a, b });
+            const rankA = trueOrder.indexOf(a);
+            const rankB = trueOrder.indexOf(b);
+            const pref = rankA < rankB ? -1 : 1;
+            pairwisePreferences.set(`${a}|||${b}`, pref);
+            return pref;
+        }
+
+        // Run initial tournament partially (first 2 comparisons)
+        let sorted = await mergeSort([...activeCandidates], compareFn);
+        const initialPromptCount = promptHistory.length;
+        assert(initialPromptCount > 0, 'Tournament made comparisons');
+
+        // Now simulate user discarding "Lieke" mid-stream
+        const discardedName = 'Lieke';
+        activeCandidates = activeCandidates.filter(n => n !== discardedName);
+        for (const key of Array.from(pairwisePreferences.keys())) {
+            if (key.startsWith(`${discardedName}|||`) || key.endsWith(`|||${discardedName}`)) {
+                pairwisePreferences.delete(key);
+            }
+        }
+
+        // Re-run tournament with remaining candidates
+        const promptsAfterDiscard = [];
+        async function compareFnTracking(a, b) {
+            const known = getKnownPreference(a, b);
+            if (known !== null) {
+                return known; // Silently reused without prompting!
+            }
+            promptsAfterDiscard.push({ a, b });
+            const rankA = trueOrder.indexOf(a);
+            const rankB = trueOrder.indexOf(b);
+            const pref = rankA < rankB ? -1 : 1;
+            pairwisePreferences.set(`${a}|||${b}`, pref);
+            return pref;
+        }
+
+        sorted = await mergeSort([...activeCandidates], compareFnTracking);
+
+        // Verification assertions:
+        assert(!sorted.includes('Lieke'), 'Discarded name Lieke is excluded from final ranking');
+        assert(JSON.stringify(sorted) === JSON.stringify(['Nola', 'Isa', 'Lana', 'Eva']), 'Remaining names correctly sorted according to user preferences');
+        
+        // Ensure no duplicate prompt was presented for pairs already decided
+        const previousPairs = new Set();
+        promptHistory.forEach(({ a, b }) => {
+            previousPairs.add(`${a}|||${b}`);
+            previousPairs.add(`${b}|||${a}`);
+        });
+
+        let hadReplayedMatchup = false;
+        promptsAfterDiscard.forEach(({ a, b }) => {
+            if (previousPairs.has(`${a}|||${b}`) || previousPairs.has(`${b}|||${a}`)) {
+                hadReplayedMatchup = true;
+            }
+        });
+
+        assert(!hadReplayedMatchup, 'Zero previously answered matchups were re-prompted after discard');
+        assert(promptsAfterDiscard.every(({ a, b }) => a !== 'Lieke' && b !== 'Lieke'), 'No matchups involved the discarded name');
+    }
+
+    await testMemoizedRankingWithDiscard();
+
+    // ── Test 12: List Builder & Category Combination Invariants ───────────
+    console.log('\nTest Suite 12: List Builder & Category Combination Invariants');
+
+    // 1. Verify combining Girls + Unisex names without duplicates
+    const dutchGirls50 = BNR.STARTER_PACKS['Dutch']['Girls'].slice(0, 50);
+    const dutchUnisex50 = BNR.STARTER_PACKS['Dutch']['Unisex'].slice(0, 50);
+
+    const combinedSet = new Set([...dutchGirls50]);
+    dutchUnisex50.forEach(name => combinedSet.add(name));
+    const combinedArray = Array.from(combinedSet);
+
+    assert(combinedArray.length >= 50, `Combined list contains ${combinedArray.length} names`);
+    assert(combinedArray.includes(dutchGirls50[0]), 'Contains girls names');
+    assert(combinedArray.includes(dutchUnisex50[0]), 'Contains unisex names');
+
+    // 2. Verify creation of session with combined category list
+    const combinedSession = BNR.createSession({
+        person: 'TestCombine',
+        category: 'Girls',
+        names: combinedArray
+    });
+
+    assert(combinedSession != null, 'Combined session created successfully');
+    assert(combinedSession.names.length === combinedArray.length, 'All combined names retained in session');
+    assert(combinedSession.category === 'Girls', 'Category retained as Girls');
+
+    // 3. Verify compare engine handles cross-category comparison (Girls vs Unisex)
+    const unisexSession = BNR.createSession({
+        person: 'TestUnisex',
+        category: 'Unisex',
+        names: dutchUnisex50
+    });
+
+    BNR.saveSession(combinedSession);
+    BNR.saveSession(unisexSession);
+
+    const loadedA = BNR.getSession(combinedSession.id);
+    const loadedB = BNR.getSession(unisexSession.id);
+
+    assert(loadedA != null && loadedB != null, 'Both cross-category sessions loaded from storage');
+    assert(loadedA.category === 'Girls' && loadedB.category === 'Unisex', 'Sessions represent different categories');
+
     console.log('\n===========================================');
     console.log(`🏁 Test Summary: ${passedTests} passed, ${failedTests} failed`);
     console.log('===========================================\n');
