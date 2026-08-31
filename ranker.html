@@ -436,8 +436,10 @@
 
     document.getElementById('rerank-btn').addEventListener('click', () => {
         const active = session.ranking.filter(n => !session.deleted.includes(n));
-        if (active.length < 2) { toast(BNR_I18N.t('minNamesAlert')); return; }
-        if (!confirm(`Start Round ${session.round + 1} with ${active.length} names?`)) return;
+        if (active.length < 2) {
+            toast(BNR_I18N.t('minNamesAlert'));
+            return;
+        }
         const child = BNR.createReRankSession(session);
         if (!child) return;
         BNR.saveSession(child);
