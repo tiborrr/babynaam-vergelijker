@@ -37,6 +37,10 @@ rsync -avz -e "${SSH_OPTS}" \
     site.webmanifest \
     favicon.svg \
     og-image.jpg \
+    fonts \
+    css \
+    js \
+    vendor \
     "${SSH_HOST}:${PUBLIC_DIR}/"
 
 rsync -avz -e "${SSH_OPTS}" \
