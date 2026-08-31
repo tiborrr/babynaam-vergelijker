@@ -78,6 +78,16 @@
                 b.className = 'cat-btn border border-stone-200 bg-white text-stone-600 font-medium py-2 rounded-xl text-xs sm:text-sm transition-all hover:bg-stone-50';
             }
         });
+
+        // Hide "include unisex" controls when Unisex category is already selected
+        const unisexContainer = document.getElementById('include-unisex-container');
+        const unisexQuickBtn = document.getElementById('btn-add-unisex-quick');
+        if (unisexContainer) {
+            unisexContainer.classList.toggle('hidden', selectedCat === 'Unisex');
+        }
+        if (unisexQuickBtn) {
+            unisexQuickBtn.classList.toggle('hidden', selectedCat === 'Unisex');
+        }
     }
 
     document.querySelectorAll('.cat-btn').forEach(btn => {
