@@ -408,13 +408,49 @@
         });
     }
 
+    function updateHeroDuelCards() {
+        const elLeft = document.getElementById('hero-name-left');
+        const elRight = document.getElementById('hero-name-right');
+        if (!elLeft || !elRight || !window.BNR || !BNR.STARTER_PACKS) return;
+
+        const lang = (window.BNR_I18N && typeof BNR_I18N.getLanguage === 'function')
+            ? BNR_I18N.getLanguage()
+            : 'nl';
+
+        const langToCulture = {
+            nl: 'Dutch',
+            ar: 'Arabic',
+            en: 'English',
+            fr: 'French',
+            es: 'Spanish',
+            de: 'Nordic'
+        };
+
+        const culture = langToCulture[lang] || 'Dutch';
+        // Pick at random either 'Girls' or 'Boys'
+        const category = Math.random() < 0.5 ? 'Girls' : 'Boys';
+
+        const pack = (BNR.STARTER_PACKS[culture] && BNR.STARTER_PACKS[culture][category])
+            ? BNR.STARTER_PACKS[culture][category]
+            : BNR.STARTER_PACKS['Dutch']['Girls'];
+
+        const top5 = pack.slice(0, 5);
+        if (top5.length < 2) return;
+
+        const shuffled = [...top5].sort(() => Math.random() - 0.5);
+        elLeft.textContent = shuffled[0];
+        elRight.textContent = shuffled[1];
+    }
+
     renderSessions();
+    updateHeroDuelCards();
 
     // Listen for language changes to re-render dynamic content
     window.addEventListener('bnr:languagechange', () => {
         renderSessions();
         updateNamesCount();
         updateCompareBar();
+        updateHeroDuelCards();
         const switcherMount = document.getElementById('lang-switcher-mount');
         if (switcherMount) {
             switcherMount.innerHTML = BNR_I18N.renderLanguageSwitcher();
