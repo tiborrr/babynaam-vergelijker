@@ -148,16 +148,41 @@
         updateMatchBanner();
         renderTable();
 
-        if (typeof confetti === 'function' && combined.length > 0) {
-            setTimeout(() => {
-                confetti({
-                    particleCount: 80,
-                    spread: 65,
-                    origin: { y: 0.6 },
-                    zIndex: 9999
-                });
-            }, 350);
+        if (combined.length > 0) {
+            setTimeout(fireCelebrationConfetti, 250);
         }
+    }
+
+        function fireCelebrationConfetti() {
+        if (typeof confetti !== 'function') return;
+
+        // Left cannon
+        confetti({
+            particleCount: 65,
+            angle: 60,
+            spread: 75,
+            origin: { x: 0, y: 0.8 },
+            zIndex: 9999
+        });
+
+        // Right cannon
+        confetti({
+            particleCount: 65,
+            angle: 120,
+            spread: 75,
+            origin: { x: 1, y: 0.8 },
+            zIndex: 9999
+        });
+
+        // High center burst
+        setTimeout(() => {
+            confetti({
+                particleCount: 80,
+                spread: 110,
+                origin: { x: 0.5, y: 0.45 },
+                zIndex: 9999
+            });
+        }, 160);
     }
 
     function updateMatchBanner() {
@@ -173,14 +198,7 @@
     }
 
     document.getElementById('match-banner').addEventListener('click', () => {
-        if (typeof confetti === 'function') {
-            confetti({
-                particleCount: 90,
-                spread: 70,
-                origin: { y: 0.6 },
-                zIndex: 9999
-            });
-        }
+        fireCelebrationConfetti();
     });
 
     // ── Filter & Sort ─────────────────────────────────────
