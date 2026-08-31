@@ -128,7 +128,13 @@
             <!-- Cultural Preset Appenders -->
             <div class="flex flex-col gap-2.5 bg-stone-50 p-3 rounded-xl border border-stone-200/60">
                 <div class="flex items-center justify-between flex-wrap gap-2">
-                    <span data-i18n="topListsTitle" class="text-[11px] font-semibold text-stone-600 uppercase tracking-wider">Top Lists</span>
+                    <div class="flex items-center gap-2">
+                        <span data-i18n="topListsTitle" class="text-[11px] font-semibold text-stone-600 uppercase tracking-wider">Top Lists</span>
+                        <label class="inline-flex items-center gap-1 cursor-pointer select-none text-[11px] font-medium text-stone-600 hover:text-stone-900 bg-white px-2 py-0.5 rounded border border-stone-200 shadow-xs transition-colors">
+                            <input type="checkbox" id="toggle-include-unisex" class="w-3 h-3 rounded accent-stone-900 text-stone-900 cursor-pointer">
+                            <span data-i18n="includeUnisex">+ Include Unisex</span>
+                        </label>
+                    </div>
                     <div class="inline-flex rounded-lg bg-stone-200/70 p-0.5" role="group" aria-label="Preset list size">
                         <button type="button" data-count="50" class="count-btn px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all bg-white text-stone-900 shadow-sm">Top 50</button>
                         <button type="button" data-count="100" class="count-btn px-2 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">100</button>
@@ -136,7 +142,7 @@
                         <button type="button" data-count="200" class="count-btn px-2 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">200</button>
                     </div>
                 </div>
-                <div id="cultural-pills" class="flex flex-wrap gap-1.5">
+                <div id="cultural-pills" class="flex flex-wrap items-center gap-1.5">
                     <button type="button" data-culture="Dutch" data-i18n="cultureDutch" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
                         Dutch
                     </button>
@@ -154,6 +160,9 @@
                     </button>
                     <button type="button" data-culture="Nordic" data-i18n="cultureNordic" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
                         Nordic
+                    </button>
+                    <button type="button" id="btn-add-unisex-quick" data-i18n="addUnisexBtn" class="text-xs bg-stone-100 hover:bg-stone-200/80 text-stone-800 font-medium px-2.5 py-1.5 rounded-lg border border-stone-300/80 shadow-xs transition-all active:scale-[0.98]">
+                        + Unisex Names
                     </button>
                     <button id="pack-clear" data-i18n="clearAll" type="button" class="text-xs bg-stone-200/70 hover:bg-stone-300/70 text-stone-600 font-medium px-2.5 py-1.5 rounded-lg transition-all ml-auto">
                         Clear All

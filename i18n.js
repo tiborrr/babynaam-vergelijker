@@ -41,6 +41,8 @@
             catGirls: 'Girls',
             catBoys: 'Boys',
             catUnisex: 'Unisex',
+            includeUnisex: '+ Include Unisex',
+            addUnisexBtn: '+ Unisex Names',
 
             // Dashboard
             sessionsSelected: '{count} sessions selected',
@@ -187,6 +189,8 @@
             catGirls: 'Meisjes',
             catBoys: 'Jongens',
             catUnisex: 'Uniseks',
+            includeUnisex: '+ Inclusief Unisex',
+            addUnisexBtn: '+ Unisex Namen',
 
             // Dashboard
             sessionsSelected: '{count} sessies geselecteerd',
@@ -333,6 +337,8 @@
             catGirls: 'Filles',
             catBoys: 'Garçons',
             catUnisex: 'Mixtes',
+            includeUnisex: '+ Inclure Unisexe',
+            addUnisexBtn: '+ Noms Unisexes',
 
             // Dashboard
             sessionsSelected: '{count} sessions sélectionnées',
@@ -479,6 +485,8 @@
             catGirls: 'Niñas',
             catBoys: 'Niños',
             catUnisex: 'Unisex',
+            includeUnisex: '+ Incluir Unisex',
+            addUnisexBtn: '+ Nombres Unisex',
 
             // Dashboard
             sessionsSelected: '{count} sesiones seleccionadas',
@@ -625,6 +633,8 @@
             catGirls: 'Mädchen',
             catBoys: 'Jungen',
             catUnisex: 'Unisex',
+            includeUnisex: '+ Inklusive Unisex',
+            addUnisexBtn: '+ Unisex-Namen',
 
             // Dashboard
             sessionsSelected: '{count} Sitzungen ausgewählt',
@@ -771,6 +781,8 @@
             catGirls: 'بنات',
             catBoys: 'أولاد',
             catUnisex: 'محايد',
+            includeUnisex: '+ تضمين الأسماء المحايدة',
+            addUnisexBtn: '+ أسماء محايدة',
 
             // Dashboard
             sessionsSelected: 'تم تحديد {count} جلسات',

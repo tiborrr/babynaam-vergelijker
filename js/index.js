@@ -83,8 +83,7 @@
     document.querySelectorAll('.cat-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             setCategory(btn.dataset.cat);
-            // Clear textarea when switching category to avoid gender mismatches
-            document.getElementById('input-names').value = '';
+            // Retain existing names so users can combine Girls/Boys with Unisex!
             updateNamesCount();
         });
     });
@@ -104,30 +103,56 @@
         });
     });
 
-    // Cultural Appenders
+    function appendNamesToTextarea(namesToAdd, btnElement) {
+        const ta = document.getElementById('input-names');
+        const currentNames = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
+        const newSet = new Set(currentNames);
+        namesToAdd.forEach(name => {
+            if (name && name.trim()) newSet.add(name.trim());
+        });
+        ta.value = Array.from(newSet).join('\n');
+        updateNamesCount();
+
+        if (btnElement) {
+            btnElement.classList.add('bg-stone-200', 'border-stone-400');
+            setTimeout(() => {
+                btnElement.classList.remove('bg-stone-200', 'border-stone-400');
+            }, 150);
+        }
+    }
+
+    // Cultural Appenders (Supports combining Girls/Boys with Unisex)
     document.querySelectorAll('.culture-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const culture = btn.dataset.culture;
             const fullPack = BNR.STARTER_PACKS[culture]?.[selectedCat] || [];
             const packList = fullPack.slice(0, selectedPresetCount);
             
-            const ta = document.getElementById('input-names');
-            let currentNames = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
-            
-            // Append and deduplicate
-            const newSet = new Set(currentNames);
-            packList.forEach(name => newSet.add(name));
-            
-            ta.value = Array.from(newSet).join('\n');
-            updateNamesCount();
+            const includeUnisex = document.getElementById('toggle-include-unisex')?.checked;
+            let namesToAdd = [...packList];
 
-            // Give the button a quick flash effect to show it was added
-            btn.classList.add('bg-stone-200', 'border-stone-400');
-            setTimeout(() => {
-                btn.classList.remove('bg-stone-200', 'border-stone-400');
-            }, 150);
+            if (includeUnisex && selectedCat !== 'Unisex') {
+                const unisexPack = (BNR.STARTER_PACKS[culture]?.['Unisex'] || []).slice(0, selectedPresetCount);
+                namesToAdd.push(...unisexPack);
+            }
+            
+            appendNamesToTextarea(namesToAdd, btn);
         });
     });
+
+    // Quick Add Unisex Names Button
+    const btnAddUnisexQuick = document.getElementById('btn-add-unisex-quick');
+    if (btnAddUnisexQuick) {
+        btnAddUnisexQuick.addEventListener('click', () => {
+            const lang = (window.BNR_I18N && typeof BNR_I18N.getLanguage === 'function')
+                ? BNR_I18N.getLanguage()
+                : 'nl';
+            const langToCulture = { nl: 'Dutch', ar: 'Arabic', en: 'English', fr: 'French', es: 'Spanish', de: 'Nordic' };
+            const culture = langToCulture[lang] || 'Dutch';
+            const unisexPack = (BNR.STARTER_PACKS[culture]?.['Unisex'] || []).slice(0, selectedPresetCount);
+            appendNamesToTextarea(unisexPack, btnAddUnisexQuick);
+        });
+    }
 
     document.getElementById('pack-clear').addEventListener('click', () => {
         document.getElementById('input-names').value = '';
