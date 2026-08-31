@@ -249,10 +249,15 @@
             </div>
 
             <!-- Cultural Preset Appenders -->
-            <div class="flex flex-col gap-2 bg-stone-50 p-3 rounded-xl border border-stone-200/60">
-                <div class="flex items-center justify-between">
-                    <span data-i18n="topListsTitle" class="text-[11px] font-semibold text-stone-600 uppercase tracking-wider">Top 50 Lists</span>
-                    <span data-i18n="topListsSub" class="text-[11px] text-stone-400">Click to append</span>
+            <div class="flex flex-col gap-2.5 bg-stone-50 p-3 rounded-xl border border-stone-200/60">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <span data-i18n="topListsTitle" class="text-[11px] font-semibold text-stone-600 uppercase tracking-wider">Top Lists</span>
+                    <div class="inline-flex rounded-lg bg-stone-200/70 p-0.5" role="group" aria-label="Preset list size">
+                        <button type="button" data-count="50" class="count-btn px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all bg-white text-stone-900 shadow-sm">Top 50</button>
+                        <button type="button" data-count="100" class="count-btn px-2 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">100</button>
+                        <button type="button" data-count="150" class="count-btn px-2 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">150</button>
+                        <button type="button" data-count="200" class="count-btn px-2 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">200</button>
+                    </div>
                 </div>
                 <div id="cultural-pills" class="flex flex-wrap gap-1.5">
                     <button type="button" data-culture="Dutch" data-i18n="cultureDutch" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
@@ -601,11 +606,27 @@
         });
     });
 
+    // Count Size Selector (Top 50, 100, 150, 200)
+    let selectedPresetCount = 50;
+    document.querySelectorAll('.count-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            selectedPresetCount = parseInt(btn.dataset.count, 10) || 50;
+            document.querySelectorAll('.count-btn').forEach(b => {
+                if (b === btn) {
+                    b.className = 'count-btn px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all bg-white text-stone-900 shadow-sm';
+                } else {
+                    b.className = 'count-btn px-2 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900';
+                }
+            });
+        });
+    });
+
     // Cultural Appenders
     document.querySelectorAll('.culture-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const culture = btn.dataset.culture;
-            const packList = BNR.STARTER_PACKS[culture]?.[selectedCat] || [];
+            const fullPack = BNR.STARTER_PACKS[culture]?.[selectedCat] || [];
+            const packList = fullPack.slice(0, selectedPresetCount);
             
             const ta = document.getElementById('input-names');
             let currentNames = ta.value.split('\n').map(n => n.trim()).filter(Boolean);
