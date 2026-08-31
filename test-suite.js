@@ -385,6 +385,31 @@ function testCompareLogic() {
     assert(listSuggestions.length > 0, 'findSimilarForList returns aggregated suggestions');
     assert(!listSuggestions.some(s => ['Sebas', 'Noah', 'Sara'].includes(s.name)), 'Excludes current candidate names from suggestions');
 
+    // ── Test 10: Starter Pack Integrity (Full 200 Names Coverage) ─────────
+    console.log('\nTest Suite 10: Starter Pack Integrity (Full 200 Names Coverage)');
+
+    const expectedCultures = ['Dutch', 'Arabic', 'English', 'French', 'Spanish', 'Nordic'];
+    const expectedCategories = ['Girls', 'Boys', 'Unisex'];
+
+    expectedCultures.forEach(culture => {
+        assert(BNR.STARTER_PACKS[culture] != null, `Starter pack culture exists: ${culture}`);
+        expectedCategories.forEach(category => {
+            const list = BNR.STARTER_PACKS[culture][category];
+            assert(Array.isArray(list), `${culture} ${category} list is an array`);
+            assert(list.length >= 200, `${culture} ${category} has at least 200 names (actual: ${list ? list.length : 0})`);
+
+            // Verify strict uniqueness (case-insensitive)
+            const uniqueSet = new Set(list.map(n => n.toLowerCase().trim()));
+            assert(uniqueSet.size === list.length, `${culture} ${category} contains 0 duplicate names (distinct: ${uniqueSet.size}/${list.length})`);
+
+            // Verify preset slices (50, 100, 150, 200)
+            [50, 100, 150, 200].forEach(count => {
+                const slice = list.slice(0, count);
+                assert(slice.length === count, `${culture} ${category} slice(${count}) yields exactly ${count} names`);
+            });
+        });
+    });
+
     console.log('\n===========================================');
     console.log(`🏁 Test Summary: ${passedTests} passed, ${failedTests} failed`);
     console.log('===========================================\n');
