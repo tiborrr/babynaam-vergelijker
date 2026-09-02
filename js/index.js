@@ -105,7 +105,6 @@
         const container = document.getElementById('chips-deck-container');
         if (!container) return;
 
-        syncTextareaFromCandidates();
         updateNamesCount();
 
         if (currentCandidates.length === 0) {
