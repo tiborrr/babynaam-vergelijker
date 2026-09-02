@@ -108,26 +108,11 @@
         updateNamesCount();
 
         if (currentCandidates.length === 0) {
-            const localizedCulture = getLocalizedCulture(activeCulture);
             container.innerHTML = `
-                <div class="w-full py-5 px-3 text-center flex flex-col items-center gap-2 m-auto select-none">
-                    <p class="text-xs text-stone-500 font-medium">${BNR_I18N.t('emptyStateQuestion')}</p>
-                    <div class="flex flex-wrap items-center justify-center gap-2 mt-1">
-                        <button type="button" id="empty-quick-load-btn" class="text-xs bg-stone-900 hover:bg-stone-800 text-white font-medium px-3.5 py-1.5 rounded-lg shadow-sm active:scale-95 transition-all">
-                            ${BNR_I18N.t('emptyQuickLoad', { count: selectedPresetCount, culture: localizedCulture })}
-                        </button>
-                        <button type="button" id="empty-quick-paste-btn" class="text-xs bg-white hover:bg-stone-50 text-stone-700 font-medium px-3.5 py-1.5 rounded-lg border border-stone-300 shadow-xs active:scale-95 transition-all">
-                            ${BNR_I18N.t('emptyQuickPaste')}
-                        </button>
-                    </div>
+                <div class="w-full py-6 px-3 text-center flex flex-col items-center gap-1 m-auto select-none">
+                    <p class="text-xs text-stone-400 font-medium">${BNR_I18N.t('emptyStateHint')}</p>
                 </div>
             `;
-            document.getElementById('empty-quick-load-btn')?.addEventListener('click', () => {
-                loadActivePreset();
-            });
-            document.getElementById('empty-quick-paste-btn')?.addEventListener('click', () => {
-                setSourceTab('paste');
-            });
             renderSuggestionsShelf();
             return;
         }
