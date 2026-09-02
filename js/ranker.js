@@ -161,6 +161,9 @@
         if (document.getElementById('comparison-state').classList.contains('hidden') || !tournament) return;
         if (['ArrowLeft', 'ArrowUp', '1'].includes(e.key)) handleChoice(-1);
         if (['ArrowRight', 'ArrowDown', '2'].includes(e.key)) handleChoice(1);
+        if (['3', 'x', 'X'].includes(e.key)) {
+            handleDiscard(2);
+        }
         if (e.code === 'Space') {
             e.preventDefault();
             handleUndo();
@@ -183,7 +186,7 @@
         } else {
             const d1 = match[0], d2 = match[1];
             tournament.discardBoth();
-            toast(BNR_I18N.t('nameDiscardedToast', { name: `${d1} & ${d2}` }));
+            toast(BNR_I18N.t('discardBothToast', { name1: d1, name2: d2 }));
         }
         renderCurrentMatch();
     }
@@ -197,6 +200,10 @@
         handleDiscard(1);
     });
     document.getElementById('discard-both-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleDiscard(2);
+    });
+    document.getElementById('dont-like-both-btn')?.addEventListener('click', (e) => {
         e.stopPropagation();
         handleDiscard(2);
     });

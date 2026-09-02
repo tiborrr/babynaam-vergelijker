@@ -35,7 +35,9 @@
             discardName: 'Discard',
             discardBoth: 'Discard both',
             nameDiscardedToast: '🗑️ Removed "{name}"',
-            keyboardHint: 'Press 1 or 2 to choose · Space to undo',
+            dontLikeBoth: "I don't like either name",
+            discardBothToast: "Removed both: '{name1}' & '{name2}'",
+            keyboardHint: "Press 1 or 2 to choose · 3 for neither · Space to undo",
 
             // Categories
             catGirls: 'Girls',
@@ -205,7 +207,9 @@
             discardName: 'Wegdoen',
             discardBoth: 'Beide wegdoen',
             nameDiscardedToast: '🗑️ "{name}" verwijderd',
-            keyboardHint: 'Druk 1 of 2 om te kiezen · Spatie voor herstel',
+            dontLikeBoth: "Ik vind beide namen niks",
+            discardBothToast: "Beide namen verwijderd: '{name1}' & '{name2}'",
+            keyboardHint: "Druk op 1 of 2 om te kiezen · 3 voor beide niks · Spatie voor herstel",
 
             // Categories
             catGirls: 'Meisjes',
@@ -375,7 +379,9 @@
             discardName: 'Retirer',
             discardBoth: 'Retirer les deux',
             nameDiscardedToast: '🗑️ "{name}" retiré',
-            keyboardHint: 'Appuyez sur 1 ou 2 · Espace pour annuler',
+            dontLikeBoth: "Je n'aime aucun des deux",
+            discardBothToast: "Les deux prénoms ont été retirés : '{name1}' & '{name2}'",
+            keyboardHint: "Appuyez sur 1 ou 2 pour choisir · 3 pour aucun des deux · Espace pour annuler",
 
             // Categories
             catGirls: 'Filles',
@@ -545,7 +551,9 @@
             discardName: 'Descartar',
             discardBoth: 'Descartar ambos',
             nameDiscardedToast: '🗑️ "{name}" descartado',
-            keyboardHint: 'Pulsa 1 o 2 para elegir · Espacio para deshacer',
+            dontLikeBoth: "No me gusta ninguno de los dos",
+            discardBothToast: "Ambos nombres eliminados: '{name1}' y '{name2}'",
+            keyboardHint: "Pulsa 1 o 2 para elegir · 3 para ninguno · Espacio para deshacer",
 
             // Categories
             catGirls: 'Niñas',
@@ -715,7 +723,9 @@
             discardName: 'Wegwerfen',
             discardBoth: 'Beide wegwerfen',
             nameDiscardedToast: '🗑️ "{name}" aussortiert',
-            keyboardHint: 'Drücke 1 oder 2 · Leertaste für zurück',
+            dontLikeBoth: "Ich mag beide Namen nicht",
+            discardBothToast: "Beide Namen entfernt: '{name1}' & '{name2}'",
+            keyboardHint: "Drücke 1 oder 2 zum Wählen · 3 für keines · Leertaste für zurück",
 
             // Categories
             catGirls: 'Mädchen',
@@ -885,7 +895,9 @@
             discardName: 'استبعاد',
             discardBoth: 'استبعاد الاثنين',
             nameDiscardedToast: '🗑️ تم استبعاد "{name}"',
-            keyboardHint: 'اضغط 1 أو 2 للاختيار · مسافة للتراجع',
+            dontLikeBoth: "لا يعجبني أي من الاسمين",
+            discardBothToast: "تم استبعاد الاسمين: '{name1}' و '{name2}'",
+            keyboardHint: "اضغط 1 أو 2 للاختيار · 3 لرفض الاسمين · مسافة للتراجع",
 
             // Categories
             catGirls: 'بنات',

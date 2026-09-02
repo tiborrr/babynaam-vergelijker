@@ -3990,8 +3990,15 @@ class BracketTournament {
         if (!this.deleted.includes(b)) this.deleted.push(b);
 
         this.totalMatchesCompleted++;
-        this.currentMatchIndex++;
 
+        if (this.phase === 'final') {
+            this.finalWinner = null;
+            this.finalLoser = null;
+            this.phase = 'finished';
+            return;
+        }
+
+        this.currentMatchIndex++;
         this.checkAdvanceRound();
     }
 
