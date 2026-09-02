@@ -381,8 +381,10 @@
                 let diffHtml;
                 if (item.rankA != null && item.rankB != null) {
                     if (item.diff === 0) {
-                        diffHtml = `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200/60 text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 w-max uppercase tracking-wider">${BNR_I18N.t('statusStrongAgree')}</span>`;
-                    } else if (item.diff <= 3) {
+                        diffHtml = `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200/70 text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 w-max">★ ${BNR_I18N.t('statusExactMatch')}</span>`;
+                    } else if (item.diff <= 2) {
+                        diffHtml = `<span class="bg-emerald-50/70 text-emerald-700 border border-emerald-100 text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 w-max">♥ Δ ${item.diff} ${BNR_I18N.t('statusGreatMatch')}</span>`;
+                    } else if (item.diff <= 5) {
                         diffHtml = `<span class="bg-stone-100 text-stone-700 text-[10px] font-medium px-2 py-0.5 rounded-md flex items-center gap-1 w-max">Δ ${item.diff} ${BNR_I18N.t('statusModerateAgree')}</span>`;
                     } else {
                         diffHtml = `<span class="bg-stone-50 text-stone-500 text-[10px] font-mono px-2 py-0.5 rounded-md">Δ ${item.diff}</span>`;

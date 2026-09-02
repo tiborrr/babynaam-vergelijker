@@ -322,7 +322,7 @@
 
             currentCandidates = [];
             addCandidateNames(unique);
-            setSourceTab('starter');
+            setSourceTab('paste');
             toast(`✓ ${unique.length} names loaded!`);
         });
     }
@@ -610,6 +610,27 @@
                 <span class="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">${catSessions.length}</span>
             `;
             section.appendChild(header);
+
+            const rankedSessions = catSessions.filter(s => s.status === 'ranked');
+            if (rankedSessions.length >= 2) {
+                const s1 = rankedSessions[0];
+                const s2 = rankedSessions[1];
+                const banner = document.createElement('div');
+                banner.className = 'mb-3.5 bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-stone-100 p-3 sm:p-3.5 rounded-2xl shadow-sm flex items-center justify-between gap-3 border border-stone-800';
+                banner.innerHTML = `
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="text-base flex-shrink-0">💡</span>
+                        <p class="text-xs sm:text-sm font-medium text-stone-200 truncate">
+                            ${BNR_I18N.t('quickComparePrompt', { person1: BNR.escapeHtml(s1.person), person2: BNR.escapeHtml(s2.person) })}
+                        </p>
+                    </div>
+                    <a href="compare.html?a=${encodeURIComponent(s1.id)}&b=${encodeURIComponent(s2.id)}" class="bg-white hover:bg-stone-100 text-stone-900 text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-all active:scale-95 flex-shrink-0 flex items-center gap-1">
+                        <span>${BNR_I18N.t('compareNowBtn')}</span>
+                        <span>→</span>
+                    </a>
+                `;
+                section.appendChild(banner);
+            }
 
             const grid = document.createElement('div');
             grid.className = 'grid grid-cols-1 gap-3.5';

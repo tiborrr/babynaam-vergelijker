@@ -72,7 +72,7 @@
         const [a, b] = match;
         const btnAName = document.getElementById('btn-a-name');
         const btnBName = document.getElementById('btn-b-name');
-        const sessionBadge = document.getElementById('session-badge');
+        const tournamentBadge = document.getElementById('tournament-badge');
         const progressText = document.getElementById('progress-text');
         const progressBar = document.getElementById('progress-bar');
         const undoBtn = document.getElementById('undo-btn');
@@ -81,21 +81,23 @@
         btnBName.textContent = b;
 
         // Dynamic round badge styling
-        if (tournament.phase === 'final') {
-            sessionBadge.textContent = BNR_I18N.t('grandFinal');
-            sessionBadge.className = 'inline-block text-[11px] font-bold uppercase tracking-widest text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-md mb-2 shadow-xs animate-pulse';
-        } else if (tournament.activeCandidates.length === 4) {
-            sessionBadge.textContent = BNR_I18N.t('semifinals');
-            sessionBadge.className = 'inline-block text-[10px] font-semibold uppercase tracking-widest text-stone-800 bg-stone-200 px-3 py-1 rounded-md mb-2';
-        } else if (tournament.activeCandidates.length === 8) {
-            sessionBadge.textContent = BNR_I18N.t('quarterfinals');
-            sessionBadge.className = 'inline-block text-[10px] font-semibold uppercase tracking-widest text-stone-600 bg-stone-100 px-3 py-1 rounded-md mb-2';
-        } else {
-            sessionBadge.textContent = BNR_I18N.t('roundOfCount', {
-                round: tournament.roundIndex,
-                count: tournament.activeCandidates.length
-            });
-            sessionBadge.className = 'inline-block text-[10px] font-semibold uppercase tracking-widest text-stone-500 bg-stone-100 px-3 py-1 rounded-md mb-2';
+        if (tournamentBadge) {
+            if (tournament.phase === 'final') {
+                tournamentBadge.textContent = BNR_I18N.t('grandFinal');
+                tournamentBadge.className = 'text-[10px] font-bold uppercase tracking-widest text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-md shadow-xs animate-pulse';
+            } else if (tournament.activeCandidates.length === 4) {
+                tournamentBadge.textContent = BNR_I18N.t('semifinals');
+                tournamentBadge.className = 'text-[10px] font-bold uppercase tracking-widest text-stone-800 bg-stone-200 px-2.5 py-0.5 rounded-md shadow-xs';
+            } else if (tournament.activeCandidates.length === 8) {
+                tournamentBadge.textContent = BNR_I18N.t('quarterfinals');
+                tournamentBadge.className = 'text-[10px] font-semibold uppercase tracking-widest text-stone-700 bg-stone-200/80 px-2.5 py-0.5 rounded-md shadow-xs';
+            } else {
+                tournamentBadge.textContent = BNR_I18N.t('roundOfCount', {
+                    round: tournament.roundIndex,
+                    count: tournament.activeCandidates.length
+                });
+                tournamentBadge.className = 'text-[10px] font-bold uppercase tracking-widest text-stone-700 bg-stone-200/90 px-2.5 py-0.5 rounded-md shadow-xs';
+            }
         }
 
         // Progress text and bar
@@ -199,7 +201,7 @@
         e.stopPropagation();
         handleDiscard(1);
     });
-    document.getElementById('discard-both-btn').addEventListener('click', (e) => {
+    document.getElementById('discard-both-btn')?.addEventListener('click', (e) => {
         e.stopPropagation();
         handleDiscard(2);
     });
