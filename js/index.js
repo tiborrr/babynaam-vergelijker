@@ -49,6 +49,8 @@
     // ── New Session Dialog & Interactive Candidate Deck ─────────────────
     let currentCandidates = [];
     let isBulkEditMode = false;
+    let activeCulture = 'Dutch';
+    let selectedPresetCount = 50;
 
     function syncTextareaFromCandidates() {
         const ta = document.getElementById('input-names');
@@ -109,6 +111,18 @@
         shelf.classList.remove('hidden');
     }
 
+    function getLocalizedCulture(cult) {
+        switch (cult) {
+            case 'Dutch': return BNR_I18N.t('cultureDutch');
+            case 'Arabic': return BNR_I18N.t('cultureArabic');
+            case 'English': return BNR_I18N.t('cultureEnglish');
+            case 'French': return BNR_I18N.t('cultureFrench');
+            case 'Spanish': return BNR_I18N.t('cultureSpanish');
+            case 'Nordic': return BNR_I18N.t('cultureNordic');
+            default: return cult;
+        }
+    }
+
     function renderChipsDeck() {
         const container = document.getElementById('chips-deck-container');
         if (!container) return;
@@ -117,7 +131,26 @@
         updateNamesCount();
 
         if (currentCandidates.length === 0) {
-            container.innerHTML = `<p id="chips-empty-notice" class="text-xs text-stone-400 m-auto py-6 text-center select-none">${BNR_I18N.t('emptyNamesNotice')}</p>`;
+            const localizedCulture = getLocalizedCulture(activeCulture);
+            container.innerHTML = `
+                <div class="w-full py-5 px-3 text-center flex flex-col items-center gap-2 m-auto select-none">
+                    <p class="text-xs text-stone-500 font-medium">${BNR_I18N.t('emptyStateQuestion')}</p>
+                    <div class="flex flex-wrap items-center justify-center gap-2 mt-1">
+                        <button type="button" id="empty-quick-load-btn" class="text-xs bg-stone-900 hover:bg-stone-800 text-white font-medium px-3.5 py-1.5 rounded-lg shadow-sm active:scale-95 transition-all">
+                            ${BNR_I18N.t('emptyQuickLoad', { count: selectedPresetCount, culture: localizedCulture })}
+                        </button>
+                        <button type="button" id="empty-quick-paste-btn" class="text-xs bg-white hover:bg-stone-50 text-stone-700 font-medium px-3.5 py-1.5 rounded-lg border border-stone-300 shadow-xs active:scale-95 transition-all">
+                            ${BNR_I18N.t('emptyQuickPaste')}
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('empty-quick-load-btn')?.addEventListener('click', () => {
+                loadActivePreset();
+            });
+            document.getElementById('empty-quick-paste-btn')?.addEventListener('click', () => {
+                setSourceTab('paste');
+            });
             renderSuggestionsShelf();
             return;
         }
@@ -144,7 +177,7 @@
     }
 
     function addCandidateNames(namesArray) {
-        if (!Array.isArray(namesArray) || namesArray.length === 0) return;
+        if (!Array.isArray(namesArray) || namesArray.length === 0) return 0;
         const seen = new Set(currentCandidates.map(n => n.toLowerCase()));
         let addedCount = 0;
 
@@ -161,16 +194,164 @@
         return addedCount;
     }
 
+    function updatePresetControlsUI() {
+        const localizedCulture = getLocalizedCulture(activeCulture);
+
+        // Update culture pills active state
+        document.querySelectorAll('.culture-btn').forEach(btn => {
+            const isMatch = btn.dataset.culture === activeCulture;
+            const cultName = getLocalizedCulture(btn.dataset.culture);
+            if (isMatch) {
+                btn.className = 'culture-btn text-xs font-semibold px-3 py-1.5 rounded-lg border border-stone-900 bg-stone-900 text-stone-50 shadow-xs transition-all active:scale-[0.98] flex items-center gap-1';
+                btn.innerHTML = `<span>✓ ${BNR.escapeHtml(cultName)}</span>`;
+            } else {
+                btn.className = 'culture-btn text-xs font-medium px-3 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-stone-100 shadow-xs transition-all active:scale-[0.98]';
+                btn.innerHTML = BNR.escapeHtml(cultName);
+            }
+        });
+
+        // Update count buttons
+        document.querySelectorAll('.count-btn').forEach(btn => {
+            const count = parseInt(btn.dataset.count, 10);
+            if (count === selectedPresetCount) {
+                btn.className = 'count-btn px-2.5 py-0.5 text-[11px] font-semibold rounded-md transition-all bg-stone-900 text-white shadow-xs';
+            } else {
+                btn.className = 'count-btn px-2.5 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900';
+            }
+        });
+
+        // Update explicit load button
+        const loadTextEl = document.getElementById('load-preset-text');
+        if (loadTextEl) {
+            loadTextEl.textContent = BNR_I18N.t('loadCultureListBtn', {
+                count: selectedPresetCount,
+                culture: localizedCulture
+            });
+        }
+    }
+
+    function loadActivePreset() {
+        const fullPack = BNR.STARTER_PACKS[activeCulture]?.[selectedCat] || [];
+        const packList = fullPack.slice(0, selectedPresetCount);
+        
+        const includeUnisex = document.getElementById('toggle-include-unisex')?.checked;
+        let namesToAdd = [...packList];
+
+        if (includeUnisex && selectedCat !== 'Unisex') {
+            const unisexPack = (BNR.STARTER_PACKS[activeCulture]?.['Unisex'] || []).slice(0, selectedPresetCount);
+            namesToAdd.push(...unisexPack);
+        }
+
+        // Replace or populate current candidates cleanly
+        currentCandidates = [];
+        addCandidateNames(namesToAdd);
+
+        const localizedCulture = getLocalizedCulture(activeCulture);
+        toast(BNR_I18N.t('loadedListToast', {
+            count: namesToAdd.length,
+            culture: localizedCulture
+        }));
+    }
+
+    // Source Switcher Tabs
+    const tabBtnStarter = document.getElementById('tab-btn-starter');
+    const tabBtnPaste = document.getElementById('tab-btn-paste');
+    const panelStarter = document.getElementById('panel-starter-packs');
+    const panelPaste = document.getElementById('panel-paste-custom');
+
+    function setSourceTab(tab) {
+        if (tab === 'starter') {
+            tabBtnStarter?.classList.replace('text-stone-600', 'text-stone-900');
+            tabBtnStarter?.classList.add('bg-white', 'font-semibold', 'shadow-xs');
+            tabBtnPaste?.classList.replace('text-stone-900', 'text-stone-600');
+            tabBtnPaste?.classList.remove('bg-white', 'font-semibold', 'shadow-xs');
+            tabBtnPaste?.classList.add('font-medium');
+
+            panelStarter?.classList.remove('hidden');
+            panelPaste?.classList.add('hidden');
+        } else {
+            tabBtnPaste?.classList.replace('text-stone-600', 'text-stone-900');
+            tabBtnPaste?.classList.add('bg-white', 'font-semibold', 'shadow-xs');
+            tabBtnStarter?.classList.replace('text-stone-900', 'text-stone-600');
+            tabBtnStarter?.classList.remove('bg-white', 'font-semibold', 'shadow-xs');
+            tabBtnStarter?.classList.add('font-medium');
+
+            panelPaste?.classList.remove('hidden');
+            panelStarter?.classList.add('hidden');
+            document.getElementById('textarea-custom-paste')?.focus();
+        }
+    }
+
+    tabBtnStarter?.addEventListener('click', () => setSourceTab('starter'));
+    tabBtnPaste?.addEventListener('click', () => setSourceTab('paste'));
+
+    // Custom Paste Panel Handling
+    const customPasteTextarea = document.getElementById('textarea-custom-paste');
+    const pastedCountBadge = document.getElementById('pasted-count-badge');
+    const applyPastedBtn = document.getElementById('btn-apply-pasted');
+    const applyPastedText = document.getElementById('apply-pasted-text');
+
+    function updatePastedCount() {
+        if (!customPasteTextarea) return;
+        const val = customPasteTextarea.value.trim();
+        const parsed = val ? val.split(/[\n,]+/).map(n => n.trim()).filter(Boolean) : [];
+        const count = [...new Set(parsed)].length;
+
+        if (pastedCountBadge) {
+            pastedCountBadge.textContent = `(${count} ${count === 1 ? 'name' : 'names'} detected)`;
+        }
+        if (applyPastedText) {
+            applyPastedText.textContent = BNR_I18N.t('usePastedListBtn', { count });
+        }
+    }
+
+    if (customPasteTextarea) {
+        customPasteTextarea.addEventListener('input', updatePastedCount);
+    }
+
+    if (applyPastedBtn) {
+        applyPastedBtn.addEventListener('click', () => {
+            const val = customPasteTextarea?.value.trim() || '';
+            const parsed = val ? val.split(/[\n,]+/).map(n => n.trim()).filter(Boolean) : [];
+            const unique = [...new Set(parsed)];
+
+            if (unique.length === 0) {
+                toast(BNR_I18N.t('minNamesAlert'));
+                return;
+            }
+
+            currentCandidates = [];
+            addCandidateNames(unique);
+            setSourceTab('starter');
+            toast(`✓ ${unique.length} names loaded!`);
+        });
+    }
+
     function openNewModal() {
         document.getElementById('input-person').value = '';
         currentCandidates = [];
         isBulkEditMode = false;
+        
+        // Detect default culture matching language
+        const lang = (window.BNR_I18N && typeof BNR_I18N.getLanguage === 'function')
+            ? BNR_I18N.getLanguage()
+            : 'nl';
+        const langToCulture = { nl: 'Dutch', ar: 'Arabic', en: 'English', fr: 'French', es: 'Spanish', de: 'Nordic' };
+        activeCulture = langToCulture[lang] || 'Dutch';
+        selectedPresetCount = 50;
+
         document.getElementById('chips-deck-container')?.classList.remove('hidden');
         document.getElementById('quick-add-container')?.classList.remove('hidden');
         document.getElementById('input-names')?.classList.add('hidden');
         const bulkLabel = document.getElementById('bulk-toggle-label');
         if (bulkLabel) bulkLabel.textContent = BNR_I18N.t('bulkEdit');
+        
+        if (customPasteTextarea) customPasteTextarea.value = '';
+        updatePastedCount();
+        setSourceTab('starter');
+
         setCategory(selectedCat || 'Girls');
+        updatePresetControlsUI();
         renderChipsDeck();
         modalNew.showModal();
         document.getElementById('input-person').focus();
@@ -272,57 +453,43 @@
     document.querySelectorAll('.cat-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             setCategory(btn.dataset.cat);
+            updatePresetControlsUI();
         });
     });
 
-    // Preset Count Selector (50, 100, 150, 200)
-    let selectedPresetCount = 50;
+    // Preset Count Selector (50, 100, 150, 200) - Loads immediately on click!
     document.querySelectorAll('.count-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             selectedPresetCount = parseInt(btn.dataset.count, 10) || 50;
-            document.querySelectorAll('.count-btn').forEach(b => {
-                if (b === btn) {
-                    b.className = 'count-btn px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all bg-white text-stone-900 shadow-sm';
-                } else {
-                    b.className = 'count-btn px-2 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900';
-                }
-            });
+            updatePresetControlsUI();
+            loadActivePreset();
         });
     });
 
-    // Cultural Appenders
+    // Cultural Pills - Click selects culture AND loads list immediately!
     document.querySelectorAll('.culture-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const culture = btn.dataset.culture;
-            const fullPack = BNR.STARTER_PACKS[culture]?.[selectedCat] || [];
-            const packList = fullPack.slice(0, selectedPresetCount);
-            
-            const includeUnisex = document.getElementById('toggle-include-unisex')?.checked;
-            let namesToAdd = [...packList];
+            activeCulture = btn.dataset.culture;
+            updatePresetControlsUI();
+            loadActivePreset();
 
-            if (includeUnisex && selectedCat !== 'Unisex') {
-                const unisexPack = (BNR.STARTER_PACKS[culture]?.['Unisex'] || []).slice(0, selectedPresetCount);
-                namesToAdd.push(...unisexPack);
-            }
-            
-            addCandidateNames(namesToAdd);
-
-            btn.classList.add('bg-stone-200', 'border-stone-400');
-            setTimeout(() => btn.classList.remove('bg-stone-200', 'border-stone-400'), 150);
+            btn.classList.add('bg-stone-800');
+            setTimeout(() => btn.classList.remove('bg-stone-800'), 150);
         });
+    });
+
+    // Explicit Load Button
+    document.getElementById('btn-load-current-preset')?.addEventListener('click', () => {
+        loadActivePreset();
     });
 
     // Quick Add Unisex Names Button
     const btnAddUnisexQuick = document.getElementById('btn-add-unisex-quick');
     if (btnAddUnisexQuick) {
         btnAddUnisexQuick.addEventListener('click', () => {
-            const lang = (window.BNR_I18N && typeof BNR_I18N.getLanguage === 'function')
-                ? BNR_I18N.getLanguage()
-                : 'nl';
-            const langToCulture = { nl: 'Dutch', ar: 'Arabic', en: 'English', fr: 'French', es: 'Spanish', de: 'Nordic' };
-            const culture = langToCulture[lang] || 'Dutch';
-            const unisexPack = (BNR.STARTER_PACKS[culture]?.['Unisex'] || []).slice(0, selectedPresetCount);
+            const unisexPack = (BNR.STARTER_PACKS[activeCulture]?.['Unisex'] || []).slice(0, selectedPresetCount);
             addCandidateNames(unisexPack);
+            toast(`+ ${unisexPack.length} Unisex names added`);
 
             btnAddUnisexQuick.classList.add('bg-stone-200');
             setTimeout(() => btnAddUnisexQuick.classList.remove('bg-stone-200'), 150);
@@ -332,6 +499,7 @@
     document.getElementById('pack-clear').addEventListener('click', () => {
         currentCandidates = [];
         renderChipsDeck();
+        toast('List cleared');
     });
 
     document.getElementById('modal-sort-az').addEventListener('click', () => {

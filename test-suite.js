@@ -560,6 +560,37 @@ function testCompareLogic() {
     assert(loadedA != null && loadedB != null, 'Both cross-category sessions loaded from storage');
     assert(loadedA.category === 'Girls' && loadedB.category === 'Unisex', 'Sessions represent different categories');
 
+    // 4. Verify custom paste parsing logic
+    const samplePasteText = "  Noor \n Olivia, Mila\n\nemma,  NOOR , Liam,  Noah \n";
+    const parsedFromPaste = samplePasteText.split(/[\n,]+/).map(n => n.trim().slice(0, 60)).filter(Boolean);
+    const uniquePasted = [];
+    const seenPasted = new Set();
+    for (const name of parsedFromPaste) {
+        const lower = name.toLowerCase();
+        if (!seenPasted.has(lower)) {
+            seenPasted.add(lower);
+            uniquePasted.push(name);
+        }
+    }
+    assert(uniquePasted.length === 6, 'Paste parser deduplicated whitespace, commas, and case variations (expected 6 names)');
+    assert(uniquePasted[0] === 'Noor' && uniquePasted[1] === 'Olivia' && uniquePasted[2] === 'Mila', 'Paste parser preserved original order');
+
+    // 5. Verify instant preset switching (e.g. 50 -> 100)
+    let activeCultureTest = 'Dutch';
+    let countTest = 100;
+    let loadedPack = (BNR.STARTER_PACKS[activeCultureTest]?.['Girls'] || []).slice(0, countTest);
+    assert(loadedPack.length === 100, 'Top 100 count button generates exactly 100 names');
+
+    countTest = 200;
+    loadedPack = (BNR.STARTER_PACKS[activeCultureTest]?.['Girls'] || []).slice(0, countTest);
+    assert(loadedPack.length === 200, 'Top 200 count button generates exactly 200 names');
+
+    // Switching culture to English
+    activeCultureTest = 'English';
+    loadedPack = (BNR.STARTER_PACKS[activeCultureTest]?.['Girls'] || []).slice(0, 50);
+    assert(loadedPack.length === 50, 'Culture switch loads 50 English names');
+    assert(loadedPack[0] !== BNR.STARTER_PACKS['Dutch']['Girls'][0] || loadedPack[1] !== BNR.STARTER_PACKS['Dutch']['Girls'][1], 'Culture switch changed the actual candidate names');
+
     console.log('\n===========================================');
     console.log(`🏁 Test Summary: ${passedTests} passed, ${failedTests} failed`);
     console.log('===========================================\n');

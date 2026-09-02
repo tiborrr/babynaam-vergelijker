@@ -125,47 +125,81 @@
                 </div>
             </div>
 
-            <!-- Cultural Preset Appenders -->
-            <div class="flex flex-col gap-2.5 bg-stone-50 p-3 rounded-xl border border-stone-200/60">
+            <!-- Source Switcher Tabs -->
+            <div class="flex items-center justify-between border-b border-stone-200/80 pb-2">
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Add Names</span>
+                <div class="inline-flex rounded-lg bg-stone-100 p-0.5" role="tablist">
+                    <button type="button" id="tab-btn-starter" class="px-3 py-1 text-xs font-semibold rounded-md transition-all bg-white text-stone-900 shadow-xs flex items-center gap-1">
+                        <span data-i18n="tabStarterPacks">⚡ Top Starter Lists</span>
+                    </button>
+                    <button type="button" id="tab-btn-paste" class="px-3 py-1 text-xs font-medium rounded-md transition-all text-stone-600 hover:text-stone-900 flex items-center gap-1">
+                        <span data-i18n="tabPasteCustom">📋 Paste Own List</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel 1: Top Lists (Starter Packs) -->
+            <div id="panel-starter-packs" class="flex flex-col gap-2.5 bg-stone-50 p-3.5 rounded-xl border border-stone-200/70">
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <div class="flex items-center gap-2">
-                        <span data-i18n="topListsTitle" class="text-[11px] font-semibold text-stone-600 uppercase tracking-wider">Top Lists</span>
+                        <span data-i18n="topListsTitle" class="text-[11px] font-semibold text-stone-700 uppercase tracking-wider">Top Lists</span>
                         <label id="include-unisex-container" class="inline-flex items-center gap-1 cursor-pointer select-none text-[11px] font-medium text-stone-600 hover:text-stone-900 bg-white px-2 py-0.5 rounded border border-stone-200 shadow-xs transition-colors">
                             <input type="checkbox" id="toggle-include-unisex" class="w-3 h-3 rounded accent-stone-900 text-stone-900 cursor-pointer">
                             <span data-i18n="includeUnisex">+ Include Unisex</span>
                         </label>
                     </div>
                     <div class="inline-flex rounded-lg bg-stone-200/70 p-0.5" role="group" aria-label="Preset list size">
-                        <button type="button" data-count="50" class="count-btn px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all bg-white text-stone-900 shadow-sm">Top 50</button>
-                        <button type="button" data-count="100" class="count-btn px-2 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">100</button>
-                        <button type="button" data-count="150" class="count-btn px-2 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">150</button>
-                        <button type="button" data-count="200" class="count-btn px-2 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">200</button>
+                        <button type="button" data-count="50" class="count-btn px-2.5 py-0.5 text-[11px] font-semibold rounded-md transition-all bg-stone-900 text-white shadow-xs">Top 50</button>
+                        <button type="button" data-count="100" class="count-btn px-2.5 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">100</button>
+                        <button type="button" data-count="150" class="count-btn px-2.5 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">150</button>
+                        <button type="button" data-count="200" class="count-btn px-2.5 py-0.5 text-[11px] font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">200</button>
                     </div>
                 </div>
                 <div id="cultural-pills" class="flex flex-wrap items-center gap-1.5">
-                    <button type="button" data-culture="Dutch" data-i18n="cultureDutch" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                    <button type="button" data-culture="Dutch" data-i18n="cultureDutch" class="culture-btn text-xs font-medium px-3 py-1.5 rounded-lg border shadow-xs transition-all active:scale-[0.98]">
                         Dutch
                     </button>
-                    <button type="button" data-culture="Arabic" data-i18n="cultureArabic" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                    <button type="button" data-culture="Arabic" data-i18n="cultureArabic" class="culture-btn text-xs font-medium px-3 py-1.5 rounded-lg border shadow-xs transition-all active:scale-[0.98]">
                         Arabic
                     </button>
-                    <button type="button" data-culture="English" data-i18n="cultureEnglish" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                    <button type="button" data-culture="English" data-i18n="cultureEnglish" class="culture-btn text-xs font-medium px-3 py-1.5 rounded-lg border shadow-xs transition-all active:scale-[0.98]">
                         English
                     </button>
-                    <button type="button" data-culture="French" data-i18n="cultureFrench" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                    <button type="button" data-culture="French" data-i18n="cultureFrench" class="culture-btn text-xs font-medium px-3 py-1.5 rounded-lg border shadow-xs transition-all active:scale-[0.98]">
                         French
                     </button>
-                    <button type="button" data-culture="Spanish" data-i18n="cultureSpanish" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                    <button type="button" data-culture="Spanish" data-i18n="cultureSpanish" class="culture-btn text-xs font-medium px-3 py-1.5 rounded-lg border shadow-xs transition-all active:scale-[0.98]">
                         Spanish
                     </button>
-                    <button type="button" data-culture="Nordic" data-i18n="cultureNordic" class="culture-btn text-xs bg-white hover:bg-stone-100 text-stone-700 font-medium px-3 py-1.5 rounded-lg border border-stone-200 shadow-sm transition-all active:scale-[0.98]">
+                    <button type="button" data-culture="Nordic" data-i18n="cultureNordic" class="culture-btn text-xs font-medium px-3 py-1.5 rounded-lg border shadow-xs transition-all active:scale-[0.98]">
                         Nordic
                     </button>
-                    <button type="button" id="btn-add-unisex-quick" data-i18n="addUnisexBtn" class="text-xs bg-stone-100 hover:bg-stone-200/80 text-stone-800 font-medium px-2.5 py-1.5 rounded-lg border border-stone-300/80 shadow-xs transition-all active:scale-[0.98]">
+                    <button type="button" id="btn-add-unisex-quick" data-i18n="addUnisexBtn" class="text-xs bg-white hover:bg-stone-100 text-stone-800 font-medium px-2.5 py-1.5 rounded-lg border border-stone-300/80 shadow-xs transition-all active:scale-[0.98]">
                         + Unisex Names
                     </button>
-                    <button id="pack-clear" data-i18n="clearAll" type="button" class="text-xs bg-stone-200/70 hover:bg-stone-300/70 text-stone-600 font-medium px-2.5 py-1.5 rounded-lg transition-all ml-auto">
+                </div>
+                <div class="flex items-center justify-between pt-1 border-t border-stone-200/50">
+                    <button type="button" id="btn-load-current-preset" class="text-xs bg-stone-900 hover:bg-stone-800 text-white font-medium px-3 py-1.5 rounded-lg transition-all active:scale-95 shadow-xs flex items-center gap-1.5">
+                        <span id="load-preset-text">⚡ Load Top 50 Dutch</span>
+                    </button>
+                    <button id="pack-clear" data-i18n="clearAll" type="button" class="text-xs text-stone-500 hover:text-stone-800 font-medium px-2 py-1 rounded transition-colors">
                         Clear All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel 2: Paste Own List (Custom Paste) -->
+            <div id="panel-paste-custom" class="hidden flex flex-col gap-2.5 bg-stone-50 p-3.5 rounded-xl border border-stone-200/70">
+                <div class="flex items-center justify-between">
+                    <label for="textarea-custom-paste" data-i18n="pasteAreaLabel" class="text-xs font-semibold text-stone-700">
+                        Paste your names (one per line or comma-separated):
+                    </label>
+                    <span id="pasted-count-badge" class="text-[11px] text-stone-500 font-medium">(0 names detected)</span>
+                </div>
+                <textarea id="textarea-custom-paste" rows="4" class="w-full border border-stone-200 rounded-xl p-3 text-sm resize-none outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-white font-sans leading-relaxed transition-all placeholder:text-stone-400" placeholder="Noor&#10;Olivia&#10;Mila&#10;Emma&#10;..."></textarea>
+                <div class="flex items-center justify-between gap-2">
+                    <button type="button" id="btn-apply-pasted" class="w-full bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium py-2 rounded-xl text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center gap-1.5">
+                        <span id="apply-pasted-text">Use this list (0 names) →</span>
                     </button>
                 </div>
             </div>
@@ -176,7 +210,7 @@
                 <div class="flex items-center justify-between">
                     <label class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 flex items-center gap-1.5">
                         <span data-i18n="candidateNamesLabel">Candidate Names</span>
-                        <span id="names-count" class="text-stone-700 font-normal lowercase">(0 names)</span>
+                        <span id="names-count" class="text-stone-700 font-semibold lowercase">(0 names)</span>
                     </label>
                     <div class="flex items-center gap-2">
                         <button id="modal-sort-az" data-i18n="sortAZ" type="button" class="text-xs text-stone-600 hover:text-stone-900 font-medium hover:underline">Sort A–Z</button>
@@ -195,10 +229,8 @@
                 </div>
 
                 <!-- Interactive Chips Deck -->
-                <div id="chips-deck-container" class="min-h-[100px] max-h-[180px] overflow-y-auto p-2.5 bg-stone-50/80 border border-stone-200 rounded-xl flex flex-wrap gap-1.5 content-start transition-all">
-                    <p id="chips-empty-notice" data-i18n="emptyNamesNotice" class="text-xs text-stone-400 m-auto py-6 text-center select-none">
-                        No names added yet. Type a name above or pick a Top List!
-                    </p>
+                <div id="chips-deck-container" class="min-h-[105px] max-h-[185px] overflow-y-auto p-2.5 bg-stone-50/80 border border-stone-200 rounded-xl flex flex-wrap gap-1.5 content-start transition-all">
+                    <!-- Dynamic chips or interactive welcoming empty state -->
                 </div>
 
                 <!-- Raw Textarea Mode (Hidden by default, toggled via Bulk Edit) -->
