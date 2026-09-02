@@ -174,9 +174,6 @@
                     <button type="button" data-culture="Nordic" data-i18n="cultureNordic" class="culture-btn text-xs font-medium px-3 py-1.5 rounded-lg border shadow-xs transition-all active:scale-[0.98]">
                         Nordic
                     </button>
-                    <button type="button" id="btn-add-unisex-quick" data-i18n="addUnisexBtn" class="text-xs bg-white hover:bg-stone-100 text-stone-800 font-medium px-2.5 py-1.5 rounded-lg border border-stone-300/80 shadow-xs transition-all active:scale-[0.98]">
-                        + Unisex Names
-                    </button>
                 </div>
                 <div class="flex items-center justify-between pt-1 border-t border-stone-200/50">
                     <button type="button" id="btn-load-current-preset" class="text-xs bg-stone-900 hover:bg-stone-800 text-white font-medium px-3 py-1.5 rounded-lg transition-all active:scale-95 shadow-xs flex items-center gap-1.5">
@@ -214,9 +211,6 @@
                     </label>
                     <div class="flex items-center gap-2">
                         <button id="modal-sort-az" data-i18n="sortAZ" type="button" class="text-xs text-stone-600 hover:text-stone-900 font-medium hover:underline">Sort A–Z</button>
-                        <button id="toggle-bulk-mode" type="button" class="text-xs text-stone-600 hover:text-stone-900 font-medium bg-stone-100 hover:bg-stone-200/80 px-2 py-0.5 rounded-md transition-colors">
-                            <span id="bulk-toggle-label" data-i18n="bulkEdit">Bulk Edit</span>
-                        </button>
                     </div>
                 </div>
 
@@ -232,9 +226,6 @@
                 <div id="chips-deck-container" class="min-h-[105px] max-h-[185px] overflow-y-auto p-2.5 bg-stone-50/80 border border-stone-200 rounded-xl flex flex-wrap gap-1.5 content-start transition-all">
                     <!-- Dynamic chips or interactive welcoming empty state -->
                 </div>
-
-                <!-- Raw Textarea Mode (Hidden by default, toggled via Bulk Edit) -->
-                <textarea id="input-names" data-i18n-attr="placeholder" data-i18n="namesPlaceholder" rows="5" class="hidden border border-stone-200 rounded-xl p-3 text-sm resize-none outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-stone-50/50 font-sans leading-relaxed transition-all placeholder:text-stone-400" placeholder="Enter or paste names (one per line)..."></textarea>
                 
                 <!-- Smart Suggestions Shelf -->
                 <div id="suggestions-shelf" class="hidden pt-1 border-t border-stone-100 flex flex-col gap-1.5">

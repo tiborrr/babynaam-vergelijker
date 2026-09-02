@@ -282,7 +282,7 @@
         }
     });
 
-    document.getElementById('copy-rank-btn').addEventListener('click', async () => {
+    async function shareRankings() {
         const activeList = session.ranking.filter(n => !session.deleted.includes(n));
         if (!activeList.length) return;
         const text = `${session.person}'s ${BNR_I18N.t('appTitle')}:\n` + activeList.map((n, i) => `${i + 1}. ${n}`).join('\n');
@@ -300,7 +300,10 @@
             }
         }
         navigator.clipboard.writeText(text).then(() => toast(BNR_I18N.t('copiedSuccess')));
-    });
+    }
+
+    document.getElementById('copy-rank-btn')?.addEventListener('click', shareRankings);
+    document.getElementById('bottom-share-btn')?.addEventListener('click', shareRankings);
 
     document.getElementById('rerank-btn').addEventListener('click', () => {
         const active = session.ranking.filter(n => !session.deleted.includes(n));

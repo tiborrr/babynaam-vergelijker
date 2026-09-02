@@ -48,30 +48,8 @@
 
     // ── New Session Dialog & Interactive Candidate Deck ─────────────────
     let currentCandidates = [];
-    let isBulkEditMode = false;
     let activeCulture = 'Dutch';
     let selectedPresetCount = 50;
-
-    function syncTextareaFromCandidates() {
-        const ta = document.getElementById('input-names');
-        if (ta) ta.value = currentCandidates.join('\n');
-    }
-
-    function syncCandidatesFromTextarea() {
-        const ta = document.getElementById('input-names');
-        if (!ta) return;
-        const parsed = ta.value.split(/[\n,]+/).map(n => n.trim().slice(0, 60)).filter(Boolean);
-        const unique = [];
-        const seen = new Set();
-        for (const name of parsed) {
-            const lower = name.toLowerCase();
-            if (!seen.has(lower)) {
-                seen.add(lower);
-                unique.push(name);
-            }
-        }
-        currentCandidates = unique;
-    }
 
     function updateNamesCount() {
         const count = currentCandidates.length;
@@ -278,6 +256,11 @@
 
             panelPaste?.classList.remove('hidden');
             panelStarter?.classList.add('hidden');
+
+            if (customPasteTextarea && !customPasteTextarea.value.trim() && currentCandidates.length > 0) {
+                customPasteTextarea.value = currentCandidates.join('\n');
+                updatePastedCount();
+            }
             document.getElementById('textarea-custom-paste')?.focus();
         }
     }
@@ -330,7 +313,6 @@
     function openNewModal() {
         document.getElementById('input-person').value = '';
         currentCandidates = [];
-        isBulkEditMode = false;
         
         // Detect default culture matching language
         const lang = (window.BNR_I18N && typeof BNR_I18N.getLanguage === 'function')
@@ -342,9 +324,6 @@
 
         document.getElementById('chips-deck-container')?.classList.remove('hidden');
         document.getElementById('quick-add-container')?.classList.remove('hidden');
-        document.getElementById('input-names')?.classList.add('hidden');
-        const bulkLabel = document.getElementById('bulk-toggle-label');
-        if (bulkLabel) bulkLabel.textContent = BNR_I18N.t('bulkEdit');
         
         if (customPasteTextarea) customPasteTextarea.value = '';
         updatePastedCount();
@@ -392,41 +371,6 @@
         quickAddBtn.addEventListener('click', handleQuickAdd);
     }
 
-    // Toggle Bulk Edit Mode
-    const toggleBulkBtn = document.getElementById('toggle-bulk-mode');
-    const bulkToggleLabel = document.getElementById('bulk-toggle-label');
-    const chipsDeck = document.getElementById('chips-deck-container');
-    const quickAddDeck = document.getElementById('quick-add-container');
-    const namesTextarea = document.getElementById('input-names');
-
-    if (toggleBulkBtn) {
-        toggleBulkBtn.addEventListener('click', () => {
-            isBulkEditMode = !isBulkEditMode;
-            if (isBulkEditMode) {
-                syncTextareaFromCandidates();
-                chipsDeck?.classList.add('hidden');
-                quickAddDeck?.classList.add('hidden');
-                namesTextarea?.classList.remove('hidden');
-                if (bulkToggleLabel) bulkToggleLabel.textContent = '✓ Done';
-                namesTextarea?.focus();
-            } else {
-                syncCandidatesFromTextarea();
-                namesTextarea?.classList.add('hidden');
-                chipsDeck?.classList.remove('hidden');
-                quickAddDeck?.classList.remove('hidden');
-                if (bulkToggleLabel) bulkToggleLabel.textContent = BNR_I18N.t('bulkEdit');
-                renderChipsDeck();
-            }
-        });
-    }
-
-    if (namesTextarea) {
-        namesTextarea.addEventListener('input', () => {
-            syncCandidatesFromTextarea();
-            updateNamesCount();
-        });
-    }
-
     function setCategory(cat) {
         selectedCat = ['Girls', 'Boys', 'Unisex'].includes(cat) ? cat : 'Girls';
         document.querySelectorAll('.cat-btn').forEach(b => {
@@ -439,12 +383,8 @@
         });
 
         const unisexContainer = document.getElementById('include-unisex-container');
-        const unisexQuickBtn = document.getElementById('btn-add-unisex-quick');
         if (unisexContainer) {
             unisexContainer.classList.toggle('hidden', selectedCat === 'Unisex');
-        }
-        if (unisexQuickBtn) {
-            unisexQuickBtn.classList.toggle('hidden', selectedCat === 'Unisex');
         }
 
         renderSuggestionsShelf();
@@ -483,19 +423,6 @@
         loadActivePreset();
     });
 
-    // Quick Add Unisex Names Button
-    const btnAddUnisexQuick = document.getElementById('btn-add-unisex-quick');
-    if (btnAddUnisexQuick) {
-        btnAddUnisexQuick.addEventListener('click', () => {
-            const unisexPack = (BNR.STARTER_PACKS[activeCulture]?.['Unisex'] || []).slice(0, selectedPresetCount);
-            addCandidateNames(unisexPack);
-            toast(`+ ${unisexPack.length} Unisex names added`);
-
-            btnAddUnisexQuick.classList.add('bg-stone-200');
-            setTimeout(() => btnAddUnisexQuick.classList.remove('bg-stone-200'), 150);
-        });
-    }
-
     document.getElementById('pack-clear').addEventListener('click', () => {
         currentCandidates = [];
         renderChipsDeck();
@@ -509,9 +436,6 @@
 
     // Form Submit
     document.getElementById('form-new-session').addEventListener('submit', () => {
-        if (isBulkEditMode) {
-            syncCandidatesFromTextarea();
-        }
         const person = document.getElementById('input-person').value.trim();
         const names = [...currentCandidates];
 
