@@ -3855,7 +3855,218 @@ function createExportData(sessionsToExport = null) {
 
 // ─── Export as global (no bundler needed) ────────────────────
 
+
+// ── Knockout Bracket Tournament Engine ────────────────────────
+class BracketTournament {
+    constructor(names) {
+        this.names = Array.isArray(names) ? [...names] : [];
+        this.activeCandidates = [...this.names];
+        this.roundIndex = 1;
+        this.currentMatches = [];
+        this.currentMatchIndex = 0;
+        this.roundWinners = [];
+        this.roundLosers = [];
+        this.byeCandidate = null;
+        this.eliminatedTiers = []; // [round1Losers, round2Losers, ...]
+        this.totalMatchesCompleted = 0;
+        this.estimatedTotalMatches = Math.max(1, this.names.length - 1);
+        
+        this.phase = 'bracket'; // 'bracket', 'final', 'finished'
+        this.finalWinner = null;
+        this.finalLoser = null;
+        this.lastWinner = null;
+        this.deleted = [];
+        this.undoStack = [];
+        
+        this.initRound();
+    }
+
+    initRound() {
+        if (this.activeCandidates.length <= 1) {
+            this.finalWinner = this.activeCandidates[0] || null;
+            this.phase = 'finished';
+            return;
+        }
+
+        if (this.activeCandidates.length === 2) {
+            this.phase = 'final';
+            this.currentMatches = [[this.activeCandidates[0], this.activeCandidates[1]]];
+            this.currentMatchIndex = 0;
+            return;
+        }
+
+        this.phase = 'bracket';
+        const list = [...this.activeCandidates];
+        this.byeCandidate = (list.length % 2 !== 0) ? list.pop() : null;
+        const matches = [];
+        for (let i = 0; i < list.length; i += 2) {
+            matches.push([list[i], list[i + 1]]);
+        }
+
+        // Anti-stick scheduling across round transitions
+        if (matches.length > 1 && this.lastWinner) {
+            if (matches[0][0] === this.lastWinner || matches[0][1] === this.lastWinner) {
+                const temp = matches[0];
+                matches[0] = matches[matches.length - 1];
+                matches[matches.length - 1] = temp;
+            }
+        }
+
+        this.currentMatches = matches;
+        this.currentMatchIndex = 0;
+        this.roundWinners = [];
+        this.roundLosers = [];
+    }
+
+    getCurrentMatch() {
+        if (this.phase === 'finished') return null;
+        return this.currentMatches[this.currentMatchIndex] || null;
+    }
+
+    choose(preference) {
+        const match = this.getCurrentMatch();
+        if (!match) return;
+
+        this.undoStack.push(this.serialize());
+
+        const [a, b] = match;
+        const winner = preference <= 0 ? a : b;
+        const loser = preference <= 0 ? b : a;
+
+        this.totalMatchesCompleted++;
+        this.lastWinner = winner;
+
+        if (this.phase === 'final') {
+            this.finalWinner = winner;
+            this.finalLoser = loser;
+            this.phase = 'finished';
+            return;
+        }
+
+        this.roundWinners.push(winner);
+        this.roundLosers.push(loser);
+        this.currentMatchIndex++;
+
+        this.checkAdvanceRound();
+    }
+
+    discard(name) {
+        const match = this.getCurrentMatch();
+        if (!match) return;
+
+        this.undoStack.push(this.serialize());
+        const [a, b] = match;
+        if (!this.deleted.includes(name)) this.deleted.push(name);
+
+        if (name === a && name === b) {
+            this.discardBoth();
+            return;
+        }
+
+        const winner = (name === a) ? b : a;
+        this.totalMatchesCompleted++;
+        this.lastWinner = winner;
+
+        if (this.phase === 'final') {
+            this.finalWinner = winner;
+            this.finalLoser = null;
+            this.phase = 'finished';
+            return;
+        }
+
+        this.roundWinners.push(winner);
+        this.currentMatchIndex++;
+
+        this.checkAdvanceRound();
+    }
+
+    discardBoth() {
+        const match = this.getCurrentMatch();
+        if (!match) return;
+
+        this.undoStack.push(this.serialize());
+        const [a, b] = match;
+        if (!this.deleted.includes(a)) this.deleted.push(a);
+        if (!this.deleted.includes(b)) this.deleted.push(b);
+
+        this.totalMatchesCompleted++;
+        this.currentMatchIndex++;
+
+        this.checkAdvanceRound();
+    }
+
+    checkAdvanceRound() {
+        if (this.currentMatchIndex >= this.currentMatches.length) {
+            if (this.byeCandidate) {
+                this.roundWinners.push(this.byeCandidate);
+                this.byeCandidate = null;
+            }
+            if (this.roundLosers.length > 0) {
+                this.eliminatedTiers.push(this.roundLosers);
+            }
+            this.activeCandidates = [...this.roundWinners];
+            this.roundIndex++;
+            this.initRound();
+        }
+    }
+
+    undo() {
+        if (this.undoStack.length === 0) return false;
+        const snapshot = this.undoStack.pop();
+        this.deserialize(snapshot);
+        return true;
+    }
+
+    serialize() {
+        return JSON.stringify({
+            activeCandidates: this.activeCandidates,
+            roundIndex: this.roundIndex,
+            currentMatches: this.currentMatches,
+            currentMatchIndex: this.currentMatchIndex,
+            roundWinners: this.roundWinners,
+            roundLosers: this.roundLosers,
+            byeCandidate: this.byeCandidate,
+            eliminatedTiers: this.eliminatedTiers,
+            totalMatchesCompleted: this.totalMatchesCompleted,
+            estimatedTotalMatches: this.estimatedTotalMatches,
+            phase: this.phase,
+            finalWinner: this.finalWinner,
+            finalLoser: this.finalLoser,
+            lastWinner: this.lastWinner,
+            deleted: this.deleted
+        });
+    }
+
+    deserialize(str) {
+        Object.assign(this, JSON.parse(str));
+    }
+
+    getFinalRanking() {
+        const result = [];
+        if (this.finalWinner && !this.deleted.includes(this.finalWinner)) result.push(this.finalWinner);
+        if (this.finalLoser && !this.deleted.includes(this.finalLoser)) result.push(this.finalLoser);
+
+        for (let i = this.eliminatedTiers.length - 1; i >= 0; i--) {
+            const tier = this.eliminatedTiers[i];
+            for (const name of tier) {
+                if (!result.includes(name) && !this.deleted.includes(name)) {
+                    result.push(name);
+                }
+            }
+        }
+
+        for (const name of this.names) {
+            if (!result.includes(name) && !this.deleted.includes(name)) {
+                result.push(name);
+            }
+        }
+
+        return result;
+    }
+}
+
 const BNR_API = {
+    BracketTournament,
     loadSessions,
     saveSessions,
     getSession,

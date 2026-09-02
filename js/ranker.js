@@ -54,195 +54,163 @@
         }, duration);
     }
 
-    // ── Ranking Engine with Pairwise Preference Memoization & Undo ──────
-    let resolveClick = null;
-    let comparisonsMade = 0;
-    let estimatedTotal = 0;
-    let pairwisePreferences = new Map(); // Key: "nameA|||nameB" -> -1 (prefer A) or 1 (prefer B)
-    let undoStack = []; // [{ a: 'Noah', b: 'Liam', pref: -1 }]
-    let initialShuffled = null;
+    // ── Bracket Knockout Tournament Controller ───────────
+    let tournament = null;
 
-    function getKnownPreference(a, b) {
-        if (pairwisePreferences.has(`${a}|||${b}`)) {
-            return pairwisePreferences.get(`${a}|||${b}`);
+    function renderCurrentMatch() {
+        if (!tournament || tournament.phase === 'finished') {
+            finishTournament();
+            return;
         }
-        if (pairwisePreferences.has(`${b}|||${a}`)) {
-            return -pairwisePreferences.get(`${b}|||${a}`);
+
+        const match = tournament.getCurrentMatch();
+        if (!match) {
+            finishTournament();
+            return;
         }
-        return null;
-    }
 
-    function recordPreference(a, b, pref) {
-        pairwisePreferences.set(`${a}|||${b}`, pref);
-        undoStack.push({ a, b, pref });
-    }
-
-    function calcMaxComparisons(len) {
-        if (len <= 1) return 0;
-        const mid = Math.floor(len / 2);
-        return calcMaxComparisons(mid) + calcMaxComparisons(len - mid) + (len - 1);
-    }
-
-    function updateProgress() {
-        const pct = Math.min((comparisonsMade / Math.max(estimatedTotal, 1)) * 100, 100);
-        document.getElementById('progress-text').textContent = BNR_I18N.t('comparisonProgress', {
-            current: comparisonsMade,
-            total: estimatedTotal
-        }) + ` (${Math.round(pct)}%)`;
-        document.getElementById('progress-bar').style.width = `${pct}%`;
-
+        const [a, b] = match;
+        const btnAName = document.getElementById('btn-a-name');
+        const btnBName = document.getElementById('btn-b-name');
+        const sessionBadge = document.getElementById('session-badge');
+        const progressText = document.getElementById('progress-text');
+        const progressBar = document.getElementById('progress-bar');
         const undoBtn = document.getElementById('undo-btn');
-        if (undoStack.length > 0) {
+
+        btnAName.textContent = a;
+        btnBName.textContent = b;
+
+        // Dynamic round badge styling
+        if (tournament.phase === 'final') {
+            sessionBadge.textContent = BNR_I18N.t('grandFinal');
+            sessionBadge.className = 'inline-block text-[11px] font-bold uppercase tracking-widest text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-md mb-2 shadow-xs animate-pulse';
+        } else if (tournament.activeCandidates.length === 4) {
+            sessionBadge.textContent = BNR_I18N.t('semifinals');
+            sessionBadge.className = 'inline-block text-[10px] font-semibold uppercase tracking-widest text-stone-800 bg-stone-200 px-3 py-1 rounded-md mb-2';
+        } else if (tournament.activeCandidates.length === 8) {
+            sessionBadge.textContent = BNR_I18N.t('quarterfinals');
+            sessionBadge.className = 'inline-block text-[10px] font-semibold uppercase tracking-widest text-stone-600 bg-stone-100 px-3 py-1 rounded-md mb-2';
+        } else {
+            sessionBadge.textContent = BNR_I18N.t('roundOfCount', {
+                round: tournament.roundIndex,
+                count: tournament.activeCandidates.length
+            });
+            sessionBadge.className = 'inline-block text-[10px] font-semibold uppercase tracking-widest text-stone-500 bg-stone-100 px-3 py-1 rounded-md mb-2';
+        }
+
+        // Progress text and bar
+        const currentMatchNum = tournament.currentMatchIndex + 1;
+        const roundTotal = tournament.currentMatches.length;
+        const totalCompleted = tournament.totalMatchesCompleted;
+        const totalEstimated = tournament.estimatedTotalMatches;
+        const pct = Math.min(100, Math.round((totalCompleted / Math.max(totalEstimated, 1)) * 100));
+
+        progressText.textContent = BNR_I18N.t('tournamentProgress', {
+            current: currentMatchNum,
+            roundTotal: roundTotal,
+            totalCompleted: totalCompleted,
+            totalEstimated: totalEstimated
+        }) + ` (${pct}%)`;
+        progressBar.style.width = `${pct}%`;
+
+        // Undo button
+        if (tournament.undoStack.length > 0) {
             undoBtn.classList.remove('hidden');
         } else {
             undoBtn.classList.add('hidden');
         }
     }
 
+    function finishTournament() {
+        if (!tournament) return;
+        const finalRankings = tournament.getFinalRanking();
+        session.ranking = finalRankings;
+        session.deleted = [...new Set([...(session.deleted || []), ...tournament.deleted])];
+        session.status = 'ranked';
+        BNR.saveSession(session);
+
+        document.getElementById('comparison-state').classList.add('hidden');
+        showResults(true);
+
+        const champ = finalRankings[0];
+        if (champ) {
+            toast(BNR_I18N.t('winnerAnnounce', { name: champ }), 5000);
+        }
+    }
+
     function handleChoice(preference) {
-        if (!resolveClick || !currentCandidateA || !currentCandidateB) return;
-        recordPreference(currentCandidateA, currentCandidateB, preference);
-        const resolve = resolveClick;
-        resolveClick = null;
-        comparisonsMade++;
-        updateProgress();
-        resolve(preference);
+        if (!tournament || tournament.phase === 'finished') return;
+        const prevRound = tournament.roundIndex;
+        tournament.choose(preference);
+
+        // Flash milestone toast if a round just finished
+        if (tournament.phase !== 'finished' && tournament.roundIndex > prevRound) {
+            toast(BNR_I18N.t('roundMilestone', {
+                round: prevRound,
+                count: tournament.activeCandidates.length
+            }));
+        }
+
+        renderCurrentMatch();
     }
 
     document.getElementById('btn-a').addEventListener('click', () => handleChoice(-1));
     document.getElementById('btn-b').addEventListener('click', () => handleChoice(1));
 
     document.addEventListener('keydown', (e) => {
-        if (document.getElementById('comparison-state').classList.contains('hidden') || !resolveClick) return;
+        if (document.getElementById('comparison-state').classList.contains('hidden') || !tournament) return;
         if (['ArrowLeft', 'ArrowUp', '1'].includes(e.key)) handleChoice(-1);
         if (['ArrowRight', 'ArrowDown', '2'].includes(e.key)) handleChoice(1);
+        if (e.code === 'Space') {
+            e.preventDefault();
+            handleUndo();
+        }
     });
 
-    let currentCandidateA = null;
-    let currentCandidateB = null;
+    function handleDiscard(choiceIndex) {
+        if (!tournament) return;
+        const match = tournament.getCurrentMatch();
+        if (!match) return;
 
-    function discardCandidate(nameToRemove) {
-        if (!nameToRemove) return;
-        const toRemove = Array.isArray(nameToRemove) ? nameToRemove : [nameToRemove];
-
-        toRemove.forEach(name => {
-            if (!session.deleted.includes(name)) {
-                session.deleted.push(name);
-            }
-            session.names = session.names.filter(n => n !== name);
-            session.ranking = session.ranking.filter(n => n !== name);
-            initialShuffled = initialShuffled.filter(n => n !== name);
-
-            // Clean up comparisons involving discarded name
-            for (const key of Array.from(pairwisePreferences.keys())) {
-                if (key.startsWith(`${name}|||`) || key.endsWith(`|||${name}`)) {
-                    pairwisePreferences.delete(key);
-                }
-            }
-            undoStack = undoStack.filter(item => item.a !== name && item.b !== name);
-        });
-
-        BNR.saveSession(session);
-
-        if (toRemove.length === 1) {
-            toast(BNR_I18N.t('nameDiscardedToast', { name: toRemove[0] }));
+        if (choiceIndex === 0) {
+            const discarded = match[0];
+            tournament.discard(discarded);
+            toast(BNR_I18N.t('nameDiscardedToast', { name: discarded }));
+        } else if (choiceIndex === 1) {
+            const discarded = match[1];
+            tournament.discard(discarded);
+            toast(BNR_I18N.t('nameDiscardedToast', { name: discarded }));
         } else {
-            toast(BNR_I18N.t('nameDiscardedToast', { name: `${toRemove[0]} & ${toRemove[1]}` }));
+            const d1 = match[0], d2 = match[1];
+            tournament.discardBoth();
+            toast(BNR_I18N.t('nameDiscardedToast', { name: `${d1} & ${d2}` }));
         }
-
-        // If 0 or 1 name left, show results immediately
-        if (initialShuffled.length <= 1) {
-            session.ranking = [...initialShuffled];
-            session.status = 'ranked';
-            BNR.saveSession(session);
-            document.getElementById('comparison-state').classList.add('hidden');
-            showResults(true);
-            return;
-        }
-
-        // Re-run tournament seamlessly: all existing choices for remaining names are automatically preserved
-        estimatedTotal = calcMaxComparisons(initialShuffled.length);
-        runMergeSortFromHistory();
+        renderCurrentMatch();
     }
 
     document.getElementById('discard-a-btn').addEventListener('click', (e) => {
         e.stopPropagation();
-        if (currentCandidateA) discardCandidate(currentCandidateA);
+        handleDiscard(0);
     });
-
     document.getElementById('discard-b-btn').addEventListener('click', (e) => {
         e.stopPropagation();
-        if (currentCandidateB) discardCandidate(currentCandidateB);
+        handleDiscard(1);
     });
-
     document.getElementById('discard-both-btn').addEventListener('click', (e) => {
         e.stopPropagation();
-        if (currentCandidateA && currentCandidateB) {
-            discardCandidate([currentCandidateA, currentCandidateB]);
-        }
+        handleDiscard(2);
     });
 
-    // Undo functionality
-    document.getElementById('undo-btn').addEventListener('click', () => {
-        if (undoStack.length === 0) return;
-        const last = undoStack.pop();
-        pairwisePreferences.delete(`${last.a}|||${last.b}`);
-        pairwisePreferences.delete(`${last.b}|||${last.a}`);
-        runMergeSortFromHistory();
-        toast('↩ Undid choice');
-    });
-
-    async function mergeSort(arr, compareFn) {
-        if (arr.length <= 1) return arr;
-        const mid = Math.floor(arr.length / 2);
-        const left = await mergeSort(arr.slice(0, mid), compareFn);
-        const right = await mergeSort(arr.slice(mid), compareFn);
-        return merge(left, right, compareFn);
-    }
-
-    async function merge(left, right, compareFn) {
-        const result = [];
-        let i = 0, j = 0;
-        while (i < left.length && j < right.length) {
-            const cmp = await compareFn(left[i], right[j]);
-            if (cmp <= 0) { result.push(left[i++]); }
-            else { result.push(right[j++]); }
+    function handleUndo() {
+        if (!tournament) return;
+        const success = tournament.undo();
+        if (success) {
+            renderCurrentMatch();
+            toast('↩ Keuze ongedaan gemaakt');
         }
-        return result.concat(left.slice(i)).concat(right.slice(j));
     }
 
-    async function runMergeSortFromHistory() {
-        comparisonsMade = 0;
-
-        const btnAName = document.getElementById('btn-a-name');
-        const btnBName = document.getElementById('btn-b-name');
-
-        const sorted = await mergeSort([...initialShuffled], async (a, b) => {
-            const known = getKnownPreference(a, b);
-            if (known !== null) {
-                // Instantly and silently reuse existing decision without asking user again
-                comparisonsMade++;
-                return known;
-            }
-
-            // Interactive prompt for new choice
-            currentCandidateA = a;
-            currentCandidateB = b;
-            btnAName.textContent = a;
-            btnBName.textContent = b;
-            updateProgress();
-
-            return new Promise(resolve => { resolveClick = resolve; });
-        });
-
-        // Persist result and show results
-        session.ranking = sorted;
-        session.status = 'ranked';
-        BNR.saveSession(session);
-
-        document.getElementById('comparison-state').classList.add('hidden');
-        showResults(true);
-    }
+    document.getElementById('undo-btn').addEventListener('click', handleUndo);
 
     async function startRanking() {
         // Shuffle to remove input bias
@@ -251,15 +219,10 @@
             const j = Math.floor(Math.random() * (i + 1));
             [arr[i], arr[j]] = [arr[j], arr[i]];
         }
-        initialShuffled = arr;
-        estimatedTotal = calcMaxComparisons(arr.length);
-        pairwisePreferences = new Map();
-        undoStack = [];
 
+        tournament = new BNR.BracketTournament(arr);
         document.getElementById('comparison-state').classList.remove('hidden');
-        updateProgress();
-
-        await runMergeSortFromHistory();
+        renderCurrentMatch();
     }
 
     // ── Results ───────────────────────────────────────────

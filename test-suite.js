@@ -144,47 +144,64 @@ if (existingIds.has(duplicateSession.id)) {
 assert(skipped === 1, 'Duplicate session correctly identified and skipped');
 
 
-// ── Test 4: Pairwise Async Merge Sort Algorithm (ranker.html) ────────────────
-console.log('\nTest Suite 4: Pairwise Ranking Engine');
+// ── Test 4: Knockout Bracket Tournament Engine ──────────────────────────────
+console.log('\nTest Suite 4: Knockout Bracket Tournament Engine');
 
-async function testMergeSortEngine() {
+function testBracketTournamentEngine() {
     const inputNames = ['Nola', 'Lyn', 'Isa', 'Jade'];
-    // Preference oracle: Nola > Isa > Lyn > Jade
     const preferredOrder = ['Nola', 'Isa', 'Lyn', 'Jade'];
     
-    let comparisonsCount = 0;
-    
-    async function mockCompare(a, b) {
-        comparisonsCount++;
+    const tournament = new BNR.BracketTournament(inputNames);
+    let matchCount = 0;
+
+    while (tournament.phase !== 'finished') {
+        const match = tournament.getCurrentMatch();
+        assert(match != null, 'Active match exists');
+        const [a, b] = match;
         const rankA = preferredOrder.indexOf(a);
         const rankB = preferredOrder.indexOf(b);
-        return rankA < rankB ? -1 : 1;
+        tournament.choose(rankA < rankB ? -1 : 1);
+        matchCount++;
     }
 
-    async function mergeSort(arr, compareFn) {
-        if (arr.length <= 1) return arr;
-        const mid = Math.floor(arr.length / 2);
-        const left = await mergeSort(arr.slice(0, mid), compareFn);
-        const right = await mergeSort(arr.slice(mid), compareFn);
-        return await merge(left, right, compareFn);
-    }
+    const finalRank = tournament.getFinalRanking();
+    assert(finalRank.length === 4, 'All 4 candidates ranked');
+    assert(finalRank[0] === 'Nola', 'Champion is #1 favorite Nola');
+    assert(matchCount === 3, `Exact N - 1 matches: ${matchCount} matches for 4 items`);
 
-    async function merge(left, right, compareFn) {
-        const result = [];
-        let i = 0, j = 0;
-        while (i < left.length && j < right.length) {
-            const cmp = await compareFn(left[i], right[j]);
-            if (cmp <= 0) result.push(left[i++]);
-            else result.push(right[j++]);
+    // Test with 50 names
+    const sample50 = Array.from({ length: 50 }, (_, i) => `Name_${i + 1}`);
+    const t50 = new BNR.BracketTournament(sample50);
+    let count50 = 0;
+    while (t50.phase !== 'finished') {
+        const m = t50.getCurrentMatch();
+        const numA = parseInt(m[0].replace('Name_', ''), 10);
+        const numB = parseInt(m[1].replace('Name_', ''), 10);
+        t50.choose(numA < numB ? -1 : 1);
+        count50++;
+    }
+    const rank50 = t50.getFinalRanking();
+    assert(rank50.length === 50, 'All 50 candidates ranked');
+    assert(rank50[0] === 'Name_1', 'Champion of 50 is Name_1');
+    assert(count50 === 49, `50 items finished in exactly 49 matches (actual: ${count50})`);
+
+    // Test odd sizes (2, 3, 5, 7, 25, 100)
+    [2, 3, 5, 7, 25, 100].forEach(size => {
+        const sample = Array.from({ length: size }, (_, i) => `Name_${i + 1}`);
+        const t = new BNR.BracketTournament(sample);
+        let c = 0;
+        while (t.phase !== 'finished') {
+            t.choose(-1);
+            c++;
         }
-        return result.concat(left.slice(i)).concat(right.slice(j));
-    }
-
-    const sorted = await mergeSort(['Jade', 'Lyn', 'Nola', 'Isa'], mockCompare);
-    
-    assert(JSON.stringify(sorted) === JSON.stringify(preferredOrder), 'MergeSort correctly ordered names by human choices');
-    assert(comparisonsCount <= 6, `Optimal comparison count: ${comparisonsCount} comparisons for 4 items`);
+        const res = t.getFinalRanking();
+        assert(res.length === size, `Size ${size} produced exact ${size} ranked items`);
+        assert(res[0] === 'Name_1', `Size ${size} champion is Name_1`);
+        assert(c === size - 1, `Size ${size} took exactly ${size - 1} matches (actual: ${c})`);
+    });
 }
+
+testBracketTournamentEngine();
 
 
 // ── Test 5: Comparison & Bidirectional Delete Sync (compare.html) ────────────
@@ -245,7 +262,6 @@ function testCompareLogic() {
 }
 
 (async () => {
-    await testMergeSortEngine();
     testCompareLogic();
 
     // ── Test 6: Security, XSS Sanitization & Schema Hardening ───────────────────
@@ -410,113 +426,54 @@ function testCompareLogic() {
         });
     });
 
-    // ── Test 11: In-Arena Discard, Pairwise Memoization & Preference Continuity ──
-    console.log('\nTest Suite 11: In-Arena Discard & Pairwise Memoization');
+    // ── Test 11: In-Tournament Discard & Undo Fidelity ─────────────────────────
+    console.log('\nTest Suite 11: In-Tournament Discard & Undo Fidelity');
 
-    // 1. Verify Pairwise Preference Engine with Mid-Tournament Discard
-    async function testMemoizedRankingWithDiscard() {
-        const candidates = ['Nola', 'Isa', 'Lana', 'Lieke', 'Eva'];
-        // Underlying human preference: Nola > Isa > Lana > Lieke > Eva
-        const trueOrder = ['Nola', 'Isa', 'Lana', 'Lieke', 'Eva'];
+    function testBracketDiscardAndUndo() {
+        const names = ['Nola', 'Lyn', 'Isa', 'Jade', 'Lieke'];
+        const t = new BNR.BracketTournament(names);
 
-        const pairwisePreferences = new Map();
-        let promptHistory = []; // Tracks actual prompts shown to user
+        const m1 = t.getCurrentMatch();
+        assert(m1 != null, 'First match ready');
 
-        function getKnownPreference(a, b) {
-            if (pairwisePreferences.has(`${a}|||${b}`)) return pairwisePreferences.get(`${a}|||${b}`);
-            if (pairwisePreferences.has(`${b}|||${a}`)) return -pairwisePreferences.get(`${b}|||${a}`);
-            return null;
+        // Test Undo
+        t.choose(-1);
+        assert(t.roundWinners.length === 1, 'Winner recorded');
+        const undone = t.undo();
+        assert(undone === true, 'Undo succeeded');
+        assert(t.roundWinners.length === 0, 'Round winners reverted after undo');
+
+        // Test Discard
+        const matchBeforeDiscard = t.getCurrentMatch();
+        const discardedName = matchBeforeDiscard[0];
+        const walkoverWinner = matchBeforeDiscard[1];
+        t.discard(discardedName);
+
+        assert(t.deleted.includes(discardedName), `${discardedName} recorded as deleted`);
+        assert(t.roundWinners.includes(walkoverWinner), `${walkoverWinner} won by walkover and advanced`);
+
+        // Complete tournament
+        while (t.phase !== 'finished') {
+            t.choose(-1);
         }
 
-        async function mergeSort(arr, compareFn) {
-            if (arr.length <= 1) return arr;
-            const mid = Math.floor(arr.length / 2);
-            const left = await mergeSort(arr.slice(0, mid), compareFn);
-            const right = await mergeSort(arr.slice(mid), compareFn);
-            return merge(left, right, compareFn);
+        const finalRankings = t.getFinalRanking();
+        assert(!finalRankings.includes(discardedName), 'Discarded name is excluded from final ranking');
+        assert(finalRankings.length === 4, 'Exact 4 remaining names ranked');
+
+        // Test Discard Both
+        const tBoth = new BNR.BracketTournament(['A', 'B', 'C', 'D']);
+        const mBoth = tBoth.getCurrentMatch();
+        tBoth.discardBoth();
+        assert(tBoth.deleted.includes(mBoth[0]) && tBoth.deleted.includes(mBoth[1]), 'Both candidates marked deleted');
+        while (tBoth.phase !== 'finished') {
+            tBoth.choose(-1);
         }
-
-        async function merge(left, right, compareFn) {
-            const result = [];
-            let i = 0, j = 0;
-            while (i < left.length && j < right.length) {
-                const cmp = await compareFn(left[i], right[j]);
-                if (cmp <= 0) result.push(left[i++]);
-                else result.push(right[j++]);
-            }
-            return result.concat(left.slice(i)).concat(right.slice(j));
-        }
-
-        let activeCandidates = [...candidates];
-
-        async function compareFn(a, b) {
-            const known = getKnownPreference(a, b);
-            if (known !== null) {
-                return known; // Instantly resolved from memoized choices
-            }
-
-            promptHistory.push({ a, b });
-            const rankA = trueOrder.indexOf(a);
-            const rankB = trueOrder.indexOf(b);
-            const pref = rankA < rankB ? -1 : 1;
-            pairwisePreferences.set(`${a}|||${b}`, pref);
-            return pref;
-        }
-
-        // Run initial tournament partially (first 2 comparisons)
-        let sorted = await mergeSort([...activeCandidates], compareFn);
-        const initialPromptCount = promptHistory.length;
-        assert(initialPromptCount > 0, 'Tournament made comparisons');
-
-        // Now simulate user discarding "Lieke" mid-stream
-        const discardedName = 'Lieke';
-        activeCandidates = activeCandidates.filter(n => n !== discardedName);
-        for (const key of Array.from(pairwisePreferences.keys())) {
-            if (key.startsWith(`${discardedName}|||`) || key.endsWith(`|||${discardedName}`)) {
-                pairwisePreferences.delete(key);
-            }
-        }
-
-        // Re-run tournament with remaining candidates
-        const promptsAfterDiscard = [];
-        async function compareFnTracking(a, b) {
-            const known = getKnownPreference(a, b);
-            if (known !== null) {
-                return known; // Silently reused without prompting!
-            }
-            promptsAfterDiscard.push({ a, b });
-            const rankA = trueOrder.indexOf(a);
-            const rankB = trueOrder.indexOf(b);
-            const pref = rankA < rankB ? -1 : 1;
-            pairwisePreferences.set(`${a}|||${b}`, pref);
-            return pref;
-        }
-
-        sorted = await mergeSort([...activeCandidates], compareFnTracking);
-
-        // Verification assertions:
-        assert(!sorted.includes('Lieke'), 'Discarded name Lieke is excluded from final ranking');
-        assert(JSON.stringify(sorted) === JSON.stringify(['Nola', 'Isa', 'Lana', 'Eva']), 'Remaining names correctly sorted according to user preferences');
-        
-        // Ensure no duplicate prompt was presented for pairs already decided
-        const previousPairs = new Set();
-        promptHistory.forEach(({ a, b }) => {
-            previousPairs.add(`${a}|||${b}`);
-            previousPairs.add(`${b}|||${a}`);
-        });
-
-        let hadReplayedMatchup = false;
-        promptsAfterDiscard.forEach(({ a, b }) => {
-            if (previousPairs.has(`${a}|||${b}`) || previousPairs.has(`${b}|||${a}`)) {
-                hadReplayedMatchup = true;
-            }
-        });
-
-        assert(!hadReplayedMatchup, 'Zero previously answered matchups were re-prompted after discard');
-        assert(promptsAfterDiscard.every(({ a, b }) => a !== 'Lieke' && b !== 'Lieke'), 'No matchups involved the discarded name');
+        const finalBoth = tBoth.getFinalRanking();
+        assert(finalBoth.length === 2, 'Discard both left exactly 2 remaining ranked items');
     }
 
-    await testMemoizedRankingWithDiscard();
+    testBracketDiscardAndUndo();
 
     // ── Test 12: List Builder & Category Combination Invariants ───────────
     console.log('\nTest Suite 12: List Builder & Category Combination Invariants');
