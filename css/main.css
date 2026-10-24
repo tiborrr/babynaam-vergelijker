@@ -60,3 +60,74 @@ dialog[open]::backdrop {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* ── Duel Arena & Name Selection Interactivity ────────────── */
+.duel-card {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+
+.duel-card:focus {
+    outline: none !important;
+}
+
+.duel-card:focus-visible {
+    outline: 2px solid #1c1815 !important;
+    outline-offset: 3px;
+}
+
+/* Instant tactile feedback when a name is chosen */
+.duel-card.is-selected {
+    background-color: #1c1815 !important;
+    border-color: #1c1815 !important;
+    transform: scale(1.015);
+    box-shadow: 0 10px 25px -5px rgba(28, 24, 21, 0.25) !important;
+}
+
+.duel-card.is-selected .duel-card-name {
+    color: #FAF8F5 !important;
+}
+
+.duel-card.is-selected .duel-card-label {
+    color: #a89b8c !important;
+}
+
+.duel-card.is-dimmed {
+    opacity: 0.3 !important;
+    transform: scale(0.985);
+}
+
+.duel-card.is-discarded {
+    opacity: 0 !important;
+    transform: scale(0.92) translateY(6px);
+    border-color: #f43f5e !important;
+}
+
+/* Silky smooth transition when next pair arrives */
+.arena-refresh {
+    animation: duelCardIn 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes duelCardIn {
+    0% {
+        opacity: 0.35;
+        transform: translateY(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .duel-card.is-selected,
+    .duel-card.is-dimmed,
+    .duel-card.is-discarded,
+    .arena-refresh {
+        transform: none !important;
+        animation: none !important;
+        transition-duration: 0.01ms !important;
+    }
+}

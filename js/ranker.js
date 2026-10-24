@@ -56,8 +56,20 @@
 
     // ── Bracket Knockout Tournament Controller ───────────
     let tournament = null;
+    let isTransitioning = false;
+
+    function clearDuelSelectionState() {
+        const btnA = document.getElementById('btn-a');
+        const btnB = document.getElementById('btn-b');
+        if (btnA) btnA.classList.remove('is-selected', 'is-dimmed', 'is-discarded');
+        if (btnB) btnB.classList.remove('is-selected', 'is-dimmed', 'is-discarded');
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
+        }
+    }
 
     function renderCurrentMatch() {
+        clearDuelSelectionState();
         if (!tournament || tournament.phase === 'finished') {
             finishTournament();
             return;
@@ -82,9 +94,12 @@
 
         // Dynamic round badge styling
         if (tournamentBadge) {
-            if (tournament.phase === 'final') {
+            if (tournament.phase === 'grand_final' || tournament.phase === 'reset_final' || tournament.phase === 'final') {
                 tournamentBadge.textContent = BNR_I18N.t('grandFinal');
                 tournamentBadge.className = 'text-[10px] font-bold uppercase tracking-widest text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-md shadow-xs animate-pulse';
+            } else if (tournament.phase === 'losers') {
+                tournamentBadge.textContent = BNR_I18N.t('losersRound');
+                tournamentBadge.className = 'text-[10px] font-bold uppercase tracking-widest text-indigo-900 bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded-md shadow-xs';
             } else if (tournament.activeCandidates.length === 4) {
                 tournamentBadge.textContent = BNR_I18N.t('semifinals');
                 tournamentBadge.className = 'text-[10px] font-bold uppercase tracking-widest text-stone-800 bg-stone-200 px-2.5 py-0.5 rounded-md shadow-xs';
@@ -141,19 +156,78 @@
     }
 
     function handleChoice(preference) {
-        if (!tournament || tournament.phase === 'finished') return;
-        const prevRound = tournament.roundIndex;
-        tournament.choose(preference);
+        if (!tournament || tournament.phase === 'finished' || isTransitioning) return;
 
-        // Flash milestone toast if a round just finished
-        if (tournament.phase !== 'finished' && tournament.roundIndex > prevRound) {
-            toast(BNR_I18N.t('roundMilestone', {
-                round: prevRound,
-                count: tournament.activeCandidates.length
-            }));
+        const btnA = document.getElementById('btn-a');
+        const btnB = document.getElementById('btn-b');
+        const arenaContainer = document.getElementById('arena-cards-container');
+
+        // Immediately blur any active element so the browser focus ring/rectangle disappears
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
         }
 
-        renderCurrentMatch();
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (prefersReducedMotion) {
+            const prevRound = tournament.roundIndex;
+            tournament.choose(preference);
+            clearDuelSelectionState();
+            if (tournament.phase === 'finished') {
+                finishTournament();
+                return;
+            }
+            if (tournament.roundIndex > prevRound) {
+                toast(BNR_I18N.t('roundMilestone', {
+                    round: prevRound,
+                    count: tournament.activeCandidates.length
+                }));
+            }
+            renderCurrentMatch();
+            return;
+        }
+
+        isTransitioning = true;
+        const chosenBtn = preference === -1 ? btnA : btnB;
+        const otherBtn = preference === -1 ? btnB : btnA;
+
+        // Visual tactile confirmation
+        if (chosenBtn) chosenBtn.classList.add('is-selected');
+        if (otherBtn) otherBtn.classList.add('is-dimmed');
+
+        setTimeout(() => {
+            clearDuelSelectionState();
+
+            const prevRound = tournament.roundIndex;
+            tournament.choose(preference);
+
+            if (tournament.phase === 'finished') {
+                isTransitioning = false;
+                finishTournament();
+                return;
+            }
+
+            if (tournament.roundIndex > prevRound) {
+                toast(BNR_I18N.t('roundMilestone', {
+                    round: prevRound,
+                    count: tournament.activeCandidates.length
+                }));
+            }
+
+            renderCurrentMatch();
+
+            // Smooth entrance animation for new pair of names
+            if (arenaContainer) {
+                arenaContainer.classList.remove('arena-refresh');
+                void arenaContainer.offsetWidth; // trigger reflow
+                arenaContainer.classList.add('arena-refresh');
+                setTimeout(() => {
+                    arenaContainer.classList.remove('arena-refresh');
+                }, 180);
+            }
+
+            isTransitioning = false;
+        }, 120);
     }
 
     document.getElementById('btn-a').addEventListener('click', () => handleChoice(-1));
@@ -173,24 +247,61 @@
     });
 
     function handleDiscard(choiceIndex) {
-        if (!tournament) return;
+        if (!tournament || isTransitioning) return;
         const match = tournament.getCurrentMatch();
         if (!match) return;
 
-        if (choiceIndex === 0) {
-            const discarded = match[0];
-            tournament.discard(discarded);
-            toast(BNR_I18N.t('nameDiscardedToast', { name: discarded }));
-        } else if (choiceIndex === 1) {
-            const discarded = match[1];
-            tournament.discard(discarded);
-            toast(BNR_I18N.t('nameDiscardedToast', { name: discarded }));
-        } else {
-            const d1 = match[0], d2 = match[1];
-            tournament.discardBoth();
-            toast(BNR_I18N.t('discardBothToast', { name1: d1, name2: d2 }));
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
         }
-        renderCurrentMatch();
+
+        const btnA = document.getElementById('btn-a');
+        const btnB = document.getElementById('btn-b');
+        const arenaContainer = document.getElementById('arena-cards-container');
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const applyDiscardData = () => {
+            if (choiceIndex === 0) {
+                const discarded = match[0];
+                tournament.discard(discarded);
+                toast(BNR_I18N.t('nameDiscardedToast', { name: discarded }));
+            } else if (choiceIndex === 1) {
+                const discarded = match[1];
+                tournament.discard(discarded);
+                toast(BNR_I18N.t('nameDiscardedToast', { name: discarded }));
+            } else {
+                const d1 = match[0], d2 = match[1];
+                tournament.discardBoth();
+                toast(BNR_I18N.t('discardBothToast', { name1: d1, name2: d2 }));
+            }
+
+            clearDuelSelectionState();
+            renderCurrentMatch();
+
+            if (arenaContainer && !prefersReducedMotion) {
+                arenaContainer.classList.remove('arena-refresh');
+                void arenaContainer.offsetWidth;
+                arenaContainer.classList.add('arena-refresh');
+                setTimeout(() => arenaContainer.classList.remove('arena-refresh'), 180);
+            }
+
+            isTransitioning = false;
+        };
+
+        if (prefersReducedMotion) {
+            applyDiscardData();
+            return;
+        }
+
+        isTransitioning = true;
+        if (choiceIndex === 0 && btnA) btnA.classList.add('is-discarded');
+        else if (choiceIndex === 1 && btnB) btnB.classList.add('is-discarded');
+        else {
+            if (btnA) btnA.classList.add('is-discarded');
+            if (btnB) btnB.classList.add('is-discarded');
+        }
+
+        setTimeout(applyDiscardData, 100);
     }
 
     document.getElementById('discard-a-btn').addEventListener('click', (e) => {
@@ -211,11 +322,21 @@
     });
 
     function handleUndo() {
-        if (!tournament) return;
+        if (!tournament || isTransitioning) return;
         const success = tournament.undo();
         if (success) {
+            clearDuelSelectionState();
             renderCurrentMatch();
-            toast('↩ Keuze ongedaan gemaakt');
+
+            const arenaContainer = document.getElementById('arena-cards-container');
+            if (arenaContainer) {
+                arenaContainer.classList.remove('arena-refresh');
+                void arenaContainer.offsetWidth;
+                arenaContainer.classList.add('arena-refresh');
+                setTimeout(() => arenaContainer.classList.remove('arena-refresh'), 180);
+            }
+
+            toast(BNR_I18N.t('undoChoice'));
         }
     }
 
@@ -282,6 +403,32 @@
         }
     });
 
+    function copyToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(() => toast(BNR_I18N.t('copiedSuccess')))
+                .catch(() => fallbackCopy(text));
+        } else {
+            fallbackCopy(text);
+        }
+    }
+
+    function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            toast(BNR_I18N.t('copiedSuccess'));
+        } catch {
+            toast('Failed to copy');
+        }
+        document.body.removeChild(ta);
+    }
+
     async function shareRankings() {
         const activeList = session.ranking.filter(n => !session.deleted.includes(n));
         if (!activeList.length) return;
@@ -299,11 +446,138 @@
                 if (err.name === 'AbortError') return;
             }
         }
-        navigator.clipboard.writeText(text).then(() => toast(BNR_I18N.t('copiedSuccess')));
+        copyToClipboard(text);
     }
 
-    document.getElementById('copy-rank-btn')?.addEventListener('click', shareRankings);
-    document.getElementById('bottom-share-btn')?.addEventListener('click', shareRankings);
+    function shareSessionWithPartner() {
+        const payload = BNR.encodeSharePayload({
+            type: 'session',
+            session: session
+        });
+        const baseUrl = window.location.origin + window.location.pathname.replace(/ranker\.html$/, '') + 'index.html';
+        const shareUrl = `${baseUrl}#share=${payload}`;
+        const message = `${BNR_I18N.t('shareWhatsAppMessage')}\n${shareUrl}`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: BNR_I18N.t('appTitle'),
+                text: message,
+                url: shareUrl
+            }).catch((err) => {
+                if (err.name !== 'AbortError') {
+                    copyToClipboard(message);
+                }
+            });
+        } else {
+            copyToClipboard(message);
+        }
+    }
+
+    function findOtherRankedSession() {
+        const sessions = BNR.getSessions();
+        return sessions.find(s => s.id !== session.id && s.category === session.category && s.status === 'ranked') || null;
+    }
+
+    // ── Partner Modal Setup ────────────────────────────────
+    const modalPartner = document.getElementById('modal-partner');
+    const modalPartnerClose = document.getElementById('modal-partner-close');
+    const formPartner = document.getElementById('form-partner-session');
+    const inputPartnerName = document.getElementById('input-partner-name');
+
+    modalPartner?.addEventListener('click', (e) => {
+        if (e.target === modalPartner) modalPartner.close();
+    });
+    modalPartnerClose?.addEventListener('click', () => modalPartner?.close());
+
+    function openPartnerModal() {
+        if (!modalPartner) return;
+        const catTranslated = BNR_I18N.t('cat' + session.category);
+        const activeCandidates = session.ranking && session.ranking.length > 0
+            ? session.ranking.filter(n => !session.deleted.includes(n))
+            : (session.names || []);
+        const namesCount = activeCandidates.length;
+
+        const infoText = document.getElementById('partner-modal-info-text');
+        if (infoText) {
+            infoText.textContent = `${namesCount} ${BNR_I18N.t('candidateNamesLabel').toLowerCase()} · ${catTranslated}`;
+        }
+        const desc = document.getElementById('partner-modal-desc');
+        if (desc) {
+            desc.textContent = BNR_I18N.t('partnerModalSub', {
+                count: namesCount,
+                category: catTranslated,
+                name: session.person
+            });
+        }
+        if (inputPartnerName) inputPartnerName.value = '';
+        modalPartner.showModal();
+        setTimeout(() => inputPartnerName?.focus(), 50);
+    }
+
+    formPartner?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const partnerName = inputPartnerName?.value.trim();
+        if (!partnerName) return;
+        const partnerSession = BNR.createPartnerSession(session, partnerName);
+        BNR.saveSession(partnerSession);
+        modalPartner.close();
+        window.location.href = `ranker.html?session=${encodeURIComponent(partnerSession.id)}`;
+    });
+
+    // ── Next Step Dynamic Guidance ─────────────────────────
+    function updateNextStepUI() {
+        const badgeEl = document.getElementById('results-next-step-badge');
+        const titleEl = document.getElementById('results-banner-title');
+        const subEl = document.getElementById('results-banner-sub');
+        const actionBtn = document.getElementById('next-step-action-btn');
+        const actionText = document.getElementById('next-step-btn-text');
+        const shareBtn = document.getElementById('bottom-share-btn');
+
+        if (!actionBtn) return;
+
+        const otherRanked = findOtherRankedSession();
+
+        if (otherRanked) {
+            // Stage 3: Both partners have ranked! Ready to compare.
+            if (badgeEl) badgeEl.textContent = BNR_I18N.t('flowStep3Title');
+            if (titleEl) titleEl.textContent = BNR_I18N.t('readyToCompareTitle');
+            if (subEl) {
+                subEl.textContent = BNR_I18N.t('readyToCompareSub', {
+                    person1: session.person,
+                    person2: otherRanked.person
+                });
+            }
+
+            if (actionText) {
+                actionText.textContent = BNR_I18N.t('compareNowWithPartnerBtn', { name: otherRanked.person });
+            }
+            actionBtn.onclick = () => {
+                window.location.href = `compare.html?a=${encodeURIComponent(session.id)}&b=${encodeURIComponent(otherRanked.id)}`;
+            };
+
+            if (shareBtn) {
+                const shareText = shareBtn.querySelector('span');
+                if (shareText) shareText.textContent = BNR_I18N.t('share');
+                shareBtn.onclick = shareRankings;
+            }
+        } else {
+            // Stage 2: Waiting for partner to rank!
+            if (badgeEl) badgeEl.textContent = BNR_I18N.t('flowStep2Title');
+            if (titleEl) titleEl.textContent = BNR_I18N.t('nextStepPartnerPrompt');
+            if (subEl) subEl.textContent = BNR_I18N.t('nextStepPartnerSub');
+
+            if (actionText) {
+                actionText.textContent = BNR_I18N.t('partnerOnThisDeviceBtn') + ' →';
+            }
+            actionBtn.onclick = openPartnerModal;
+
+            if (shareBtn) {
+                const shareText = shareBtn.querySelector('span');
+                if (shareText) shareText.textContent = BNR_I18N.t('shareLinkWithPartnerBtn');
+                shareBtn.onclick = shareSessionWithPartner;
+            }
+        }
+    }
 
     document.getElementById('rerank-btn').addEventListener('click', () => {
         const active = session.ranking.filter(n => !session.deleted.includes(n));
@@ -472,6 +746,8 @@
         } else {
             deletedSection.classList.add('hidden');
         }
+
+        updateNextStepUI();
     }
 
     function showResults(triggerConfetti = false) {

@@ -30,8 +30,11 @@
     const modalNew = document.getElementById('modal-new');
     const modalImport = document.getElementById('modal-import');
     const modalExport = document.getElementById('modal-export');
+    const modalPartner = document.getElementById('modal-partner');
+    let activePartnerSourceSession = null;
 
     function setupDialogBackdropDismiss(dialog) {
+        if (!dialog) return;
         dialog.addEventListener('click', (e) => {
             const rect = dialog.getBoundingClientRect();
             const isInDialog = (
@@ -44,7 +47,7 @@
         });
     }
 
-    [modalNew, modalImport, modalExport].forEach(setupDialogBackdropDismiss);
+    [modalNew, modalImport, modalExport, modalPartner].filter(Boolean).forEach(setupDialogBackdropDismiss);
 
     // ── New Session Dialog & Interactive Candidate Deck ─────────────────
     let currentCandidates = [];
@@ -321,8 +324,137 @@
     }
 
     document.getElementById('new-session-btn').addEventListener('click', openNewModal);
-    document.getElementById('hero-new-btn').addEventListener('click', openNewModal);
+    document.getElementById('hero-new-btn')?.addEventListener('click', openNewModal);
     document.getElementById('modal-close').addEventListener('click', () => modalNew.close());
+
+    // ── Partner Session Modal & Fast Pairing ──────────
+    function openPartnerModal(sourceSession) {
+        if (!modalPartner) return;
+        activePartnerSourceSession = sourceSession;
+        if (!activePartnerSourceSession) {
+            const sessions = BNR.loadSessions();
+            activePartnerSourceSession = sessions[0] || null;
+        }
+        if (!activePartnerSourceSession) {
+            openNewModal();
+            return;
+        }
+
+        const input = document.getElementById('input-partner-name');
+        if (input) {
+            input.value = '';
+        }
+
+        const namesCount = (activePartnerSourceSession.names || []).length || (activePartnerSourceSession.ranking || []).length;
+        const catTranslated = BNR_I18N.t('cat' + (activePartnerSourceSession.category || 'Girls'));
+
+        const descEl = document.getElementById('partner-modal-desc');
+        if (descEl) {
+            descEl.textContent = BNR_I18N.t('partnerModalSub', {
+                count: namesCount,
+                category: catTranslated,
+                name: activePartnerSourceSession.person
+            });
+        }
+
+        const infoEl = document.getElementById('partner-modal-info-text');
+        if (infoEl) {
+            infoEl.textContent = `${namesCount} ${BNR_I18N.t('candidateNamesLabel').toLowerCase()} · ${catTranslated}`;
+        }
+
+        const btnText = document.getElementById('partner-start-btn-text');
+        if (btnText) {
+            btnText.textContent = BNR_I18N.t('startRanking');
+        }
+
+        modalPartner.showModal();
+        if (input) input.focus();
+    }
+
+    document.getElementById('form-partner-session')?.addEventListener('submit', () => {
+        const input = document.getElementById('input-partner-name');
+        const partnerName = input ? input.value.trim() : '';
+        if (!partnerName) {
+            toast(BNR_I18N.t('personRequiredAlert'));
+            return;
+        }
+        if (!activePartnerSourceSession) return;
+
+        const newSession = BNR.createPartnerSession(activePartnerSourceSession, partnerName);
+        if (!newSession) {
+            toast('Error creating partner session');
+            return;
+        }
+        BNR.saveSession(newSession);
+        modalPartner.close();
+        window.location.href = `ranker.html?session=${encodeURIComponent(newSession.id)}`;
+    });
+
+    document.getElementById('modal-partner-close')?.addEventListener('click', () => {
+        modalPartner?.close();
+    });
+
+    // ── Smart Partner Link Sharing (WhatsApp / Share API) ─────
+    function shareSessionWithPartner(session) {
+        if (!session) return;
+        const payload = BNR.encodeSharePayload({
+            type: 'session',
+            session: session
+        });
+        const url = `${window.location.origin}${window.location.pathname}#share=${payload}`;
+        const message = `${BNR_I18N.t('shareWhatsAppMessage')}\n${url}`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: BNR_I18N.t('appTitle'),
+                text: message
+            }).catch(err => {
+                if (err.name !== 'AbortError') {
+                    copyShareLink(url);
+                }
+            });
+        } else {
+            copyShareLink(url);
+        }
+    }
+
+    function copyShareLink(url) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(() => {
+                toast(BNR_I18N.t('linkCopiedToast'));
+            }).catch(() => {
+                toast(url);
+            });
+        } else {
+            toast(url);
+        }
+    }
+
+    // ── Incoming Share Link Detection ──────────────────────
+    function checkIncomingShare() {
+        let shareParam = new URLSearchParams(window.location.search).get('share');
+        if (!shareParam && window.location.hash.startsWith('#share=')) {
+            shareParam = window.location.hash.slice(7);
+        }
+        if (!shareParam) return;
+
+        const data = BNR.decodeSharePayload(shareParam);
+        if (!data || !data.session) return;
+
+        const sharedSession = data.session;
+        const existing = BNR.getSession(sharedSession.id);
+        if (!existing) {
+            BNR.saveSession(sharedSession);
+        }
+
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState(null, '', cleanUrl);
+
+        setTimeout(() => {
+            toast(BNR_I18N.t('sharedInviteBannerTitle', { name: sharedSession.person }));
+            openPartnerModal(sharedSession);
+        }, 350);
+    }
 
     // Quick Add Input (Enter key or Add button)
     const quickInput = document.getElementById('input-quick-add');
@@ -480,11 +612,247 @@
             : s.names.length;
     }
 
+    function renderFlowStepper() {
+        const container = document.getElementById('flow-stepper-container');
+        if (!container) return;
+
+        const sessions = BNR.loadSessions();
+
+        // Group by category to find partner pairs
+        const groups = {};
+        sessions.forEach(s => {
+            const cat = s.category || 'Girls';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(s);
+        });
+
+        // Pick focus category: currently selectedCat or the first category with sessions
+        const catKeys = Object.keys(groups);
+        let targetCat = selectedCat || 'Girls';
+        if (!groups[targetCat] && catKeys.length > 0) {
+            targetCat = catKeys[0];
+        }
+        const catSessions = groups[targetCat] || [];
+
+        const partner1 = catSessions[0] || null;
+        const partner2 = catSessions[1] || null;
+
+        const s1Done = partner1 && partner1.status === 'ranked';
+        const s1InProgress = partner1 && partner1.status !== 'ranked';
+        const s2Done = partner2 && partner2.status === 'ranked';
+        const s2InProgress = partner2 && partner2.status !== 'ranked';
+
+        const bothReady = s1Done && s2Done;
+
+        // Stepper Pills status text
+        const p1Title = BNR_I18N.t('flowStep1Title');
+        const p2Title = BNR_I18N.t('flowStep2Title');
+        const p3Title = BNR_I18N.t('flowStep3Title');
+
+        let p1Status = '';
+        let p1PillClass = '';
+        if (s1Done) {
+            p1Status = `✓ ${BNR_I18N.t('flowStepDone', { name: partner1.person })}`;
+            p1PillClass = 'border-stone-900 bg-stone-900 text-stone-50';
+        } else if (s1InProgress) {
+            p1Status = `⏳ ${BNR.escapeHtml(partner1.person)}`;
+            p1PillClass = 'border-stone-900 bg-stone-900 text-stone-50 shadow-sm';
+        } else {
+            p1Status = BNR_I18N.t('flowStep1Waiting');
+            p1PillClass = 'border-stone-900 bg-stone-900 text-stone-50 shadow-sm';
+        }
+
+        let p2Status = '';
+        let p2PillClass = '';
+        if (s2Done) {
+            p2Status = `✓ ${BNR_I18N.t('flowStepDone', { name: partner2.person })}`;
+            p2PillClass = 'border-stone-900 bg-stone-900 text-stone-50';
+        } else if (s2InProgress) {
+            p2Status = `⏳ ${BNR.escapeHtml(partner2.person)}`;
+            p2PillClass = 'border-stone-900 bg-stone-900 text-stone-50 shadow-sm';
+        } else if (s1Done) {
+            p2Status = `👉 ${BNR_I18N.t('nextStepPartnerPrompt')}`;
+            p2PillClass = 'border-stone-900 bg-stone-900 text-stone-50 shadow-sm';
+        } else {
+            p2Status = BNR_I18N.t('flowStep2Waiting');
+            p2PillClass = 'border-stone-200/80 bg-white text-stone-500';
+        }
+
+        let p3Status = '';
+        let p3PillClass = '';
+        if (bothReady) {
+            p3Status = `🎉 ${BNR_I18N.t('compare')}`;
+            p3PillClass = 'border-stone-900 bg-stone-900 text-stone-50 shadow-sm';
+        } else {
+            p3Status = BNR_I18N.t('flowStep3Waiting');
+            p3PillClass = 'border-stone-200/80 bg-white text-stone-500';
+        }
+
+        // Generate Dynamic Action Card
+        let actionCardHtml = '';
+        if (sessions.length === 0) {
+            // State 0: No sessions yet
+            actionCardHtml = `
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="min-w-0 flex-1">
+                        <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">
+                            <span class="w-2 h-2 rounded-full bg-stone-900"></span>
+                            <span data-i18n="flowStep1Title">${BNR.escapeHtml(p1Title)}</span>
+                        </div>
+                        <h3 class="font-serif italic text-xl sm:text-2xl text-stone-900 tracking-tight mb-1" data-i18n="step1ActionCardTitle">
+                            ${BNR_I18N.t('step1ActionCardTitle')}
+                        </h3>
+                        <p class="text-xs text-stone-500 leading-relaxed max-w-lg" data-i18n="step1ActionCardSub">
+                            ${BNR_I18N.t('step1ActionCardSub')}
+                        </p>
+                    </div>
+                    <button type="button" id="flow-btn-start-step1" class="bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium px-5 py-3 rounded-xl text-xs sm:text-sm shadow-sm active:scale-[0.98] transition-all flex items-center gap-1.5 flex-shrink-0">
+                        <span data-i18n="startStep1Btn">${BNR_I18N.t('startStep1Btn')}</span>
+                        <span>→</span>
+                    </button>
+                </div>
+            `;
+        } else if (s1InProgress) {
+            // State 1: Partner 1 is in progress
+            actionCardHtml = `
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="min-w-0 flex-1">
+                        <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-600 mb-1">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span data-i18n="flowStep1Title">${BNR.escapeHtml(p1Title)}</span>
+                        </div>
+                        <h3 class="font-serif italic text-xl sm:text-2xl text-stone-900 tracking-tight mb-1">
+                            ${BNR_I18N.t('inProgressCardTitle', { name: BNR.escapeHtml(partner1.person) })}
+                        </h3>
+                        <p class="text-xs text-stone-500 leading-relaxed max-w-lg">
+                            ${BNR_I18N.t('inProgressCardSub', { count: partner1.names.length })}
+                        </p>
+                    </div>
+                    <a href="ranker.html?session=${encodeURIComponent(partner1.id)}" class="bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium px-5 py-3 rounded-xl text-xs sm:text-sm shadow-sm active:scale-[0.98] transition-all flex items-center gap-1.5 flex-shrink-0">
+                        <span>${BNR_I18N.t('continueRankingBtn', { name: BNR.escapeHtml(partner1.person) })}</span>
+                    </a>
+                </div>
+            `;
+        } else if (s1Done && !partner2) {
+            // State 2: Partner 1 done, Partner 2 not yet created
+            const activeCount = partner1.ranking.filter(n => !partner1.deleted.includes(n)).length;
+            actionCardHtml = `
+                <div class="flex flex-col gap-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-stone-200/60">
+                        <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
+                            <span>✓ ${BNR.escapeHtml(partner1.person)} ${BNR_I18N.t('rankedStatus').toLowerCase()} (${activeCount} ${BNR_I18N.t('candidateNamesLabel').toLowerCase()})</span>
+                        </div>
+                        <span class="text-[11px] font-semibold text-stone-400 uppercase tracking-wider" data-i18n="flowStep2Title">${BNR.escapeHtml(p2Title)}</span>
+                    </div>
+                    <div>
+                        <h3 class="font-serif italic text-xl sm:text-2xl text-stone-900 tracking-tight mb-1" data-i18n="nextStepPartnerPrompt">
+                            ${BNR_I18N.t('nextStepPartnerPrompt')}
+                        </h3>
+                        <p class="text-xs text-stone-500 leading-relaxed mb-4" data-i18n="nextStepPartnerSub">
+                            ${BNR_I18N.t('nextStepPartnerSub')}
+                        </p>
+                        <div class="flex flex-wrap gap-2.5">
+                            <button type="button" id="flow-btn-partner-device" class="bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow-sm active:scale-[0.98] transition-all flex items-center gap-1.5">
+                                <span data-i18n="partnerOnThisDeviceBtn">${BNR_I18N.t('partnerOnThisDeviceBtn')}</span>
+                                <span>→</span>
+                            </button>
+                            <button type="button" id="flow-btn-partner-share" class="bg-white hover:bg-stone-100 text-stone-700 border border-stone-200 font-medium px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow-xs active:scale-[0.98] transition-all flex items-center gap-1.5">
+                                <span data-i18n="shareLinkWithPartnerBtn">${BNR_I18N.t('shareLinkWithPartnerBtn')}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (s2InProgress) {
+            // State 3: Partner 2 in progress
+            actionCardHtml = `
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="min-w-0 flex-1">
+                        <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-600 mb-1">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span data-i18n="flowStep2Title">${BNR.escapeHtml(p2Title)}</span>
+                        </div>
+                        <h3 class="font-serif italic text-xl sm:text-2xl text-stone-900 tracking-tight mb-1" data-i18n="almostReadyTitle">
+                            ${BNR_I18N.t('almostReadyTitle')}
+                        </h3>
+                        <p class="text-xs text-stone-500 leading-relaxed max-w-lg">
+                            ${BNR_I18N.t('almostReadySub', { person1: BNR.escapeHtml(partner1.person), person2: BNR.escapeHtml(partner2.person) })}
+                        </p>
+                    </div>
+                    <a href="ranker.html?session=${encodeURIComponent(partner2.id)}" class="bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium px-5 py-3 rounded-xl text-xs sm:text-sm shadow-sm active:scale-[0.98] transition-all flex items-center gap-1.5 flex-shrink-0">
+                        <span>${BNR_I18N.t('continueRankingBtn', { name: BNR.escapeHtml(partner2.person) })}</span>
+                    </a>
+                </div>
+            `;
+        } else if (bothReady) {
+            // State 4: Both are ranked! Ready to compare!
+            actionCardHtml = `
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="min-w-0 flex-1">
+                        <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-700 mb-1">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span data-i18n="flowStep3Title">${BNR.escapeHtml(p3Title)}</span>
+                        </div>
+                        <h3 class="font-serif italic text-xl sm:text-2xl text-stone-900 tracking-tight mb-1" data-i18n="readyToCompareTitle">
+                            ${BNR_I18N.t('readyToCompareTitle')}
+                        </h3>
+                        <p class="text-xs text-stone-500 leading-relaxed max-w-lg">
+                            ${BNR_I18N.t('readyToCompareSub', { person1: BNR.escapeHtml(partner1.person), person2: BNR.escapeHtml(partner2.person) })}
+                        </p>
+                    </div>
+                    <a href="compare.html?a=${encodeURIComponent(partner1.id)}&b=${encodeURIComponent(partner2.id)}" class="bg-stone-900 hover:bg-stone-800 text-stone-50 font-semibold px-6 py-3.5 rounded-xl text-xs sm:text-sm shadow-md active:scale-[0.98] transition-all flex items-center gap-1.5 flex-shrink-0">
+                        <span data-i18n="viewMatchBtn">${BNR_I18N.t('viewMatchBtn')}</span>
+                    </a>
+                </div>
+            `;
+        }
+
+        const catTranslated = BNR_I18N.t('cat' + targetCat);
+
+        container.innerHTML = `
+            <div class="bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-[0_2px_8px_-2px_rgba(40,30,20,0.03)] mb-3.5">
+                <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2.5 px-0.5">
+                    <span data-i18n="flowGuideTitle">${BNR_I18N.t('flowGuideTitle')}</span>
+                    <span class="text-[10px] text-stone-500 font-medium">${BNR.escapeHtml(catTranslated)}</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="flex flex-col gap-1 p-2.5 rounded-xl border transition-all ${p1PillClass}">
+                        <span class="text-[11px] font-semibold tracking-tight truncate">${BNR.escapeHtml(p1Title)}</span>
+                        <span class="text-[10px] opacity-80 font-medium truncate">${p1Status}</span>
+                    </div>
+                    <div class="flex flex-col gap-1 p-2.5 rounded-xl border transition-all ${p2PillClass}">
+                        <span class="text-[11px] font-semibold tracking-tight truncate">${BNR.escapeHtml(p2Title)}</span>
+                        <span class="text-[10px] opacity-80 font-medium truncate">${p2Status}</span>
+                    </div>
+                    <div class="flex flex-col gap-1 p-2.5 rounded-xl border transition-all ${p3PillClass}">
+                        <span class="text-[11px] font-semibold tracking-tight truncate">${BNR.escapeHtml(p3Title)}</span>
+                        <span class="text-[10px] opacity-80 font-medium truncate">${p3Status}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-white to-stone-50/70 border border-stone-200/90 rounded-2xl p-5 sm:p-6 shadow-[0_4px_16px_-4px_rgba(40,30,20,0.04)]">
+                ${actionCardHtml}
+            </div>
+        `;
+
+        // Wire up dynamic action card buttons
+        document.getElementById('flow-btn-start-step1')?.addEventListener('click', openNewModal);
+        document.getElementById('flow-btn-partner-device')?.addEventListener('click', () => {
+            openPartnerModal(partner1);
+        });
+        document.getElementById('flow-btn-partner-share')?.addEventListener('click', () => {
+            shareSessionWithPartner(partner1);
+        });
+    }
+
     function renderSessions() {
         const sessions = BNR.loadSessions();
         const list = document.getElementById('sessions-list');
         const heroSection = document.getElementById('hero-section');
         list.innerHTML = '';
+
+        renderFlowStepper();
 
         if (sessions.length === 0) {
             heroSection.classList.remove('hidden');
@@ -693,6 +1061,7 @@
 
     renderSessions();
     updateHeroDuelCards();
+    checkIncomingShare();
 
     // Listen for language changes to re-render dynamic content
     window.addEventListener('bnr:languagechange', () => {

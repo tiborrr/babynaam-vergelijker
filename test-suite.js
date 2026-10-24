@@ -144,8 +144,8 @@ if (existingIds.has(duplicateSession.id)) {
 assert(skipped === 1, 'Duplicate session correctly identified and skipped');
 
 
-// ── Test 4: Knockout Bracket Tournament Engine ──────────────────────────────
-console.log('\nTest Suite 4: Knockout Bracket Tournament Engine');
+// ── Test 4: Double-Elimination Bracket Tournament Engine ──────────────────────────────
+console.log('\nTest Suite 4: Double-Elimination Bracket Tournament Engine');
 
 function testBracketTournamentEngine() {
     const inputNames = ['Nola', 'Lyn', 'Isa', 'Jade'];
@@ -167,7 +167,8 @@ function testBracketTournamentEngine() {
     const finalRank = tournament.getFinalRanking();
     assert(finalRank.length === 4, 'All 4 candidates ranked');
     assert(finalRank[0] === 'Nola', 'Champion is #1 favorite Nola');
-    assert(matchCount === 3, `Exact N - 1 matches: ${matchCount} matches for 4 items`);
+    assert(finalRank[1] === 'Isa', 'Runner-up is #2 favorite Isa, rescued via Second Chance / Herkansing');
+    assert(matchCount === 2 * (inputNames.length - 1), `Double elimination 2*(N-1) matches: ${matchCount} matches for 4 items`);
 
     // Test with 50 names
     const sample50 = Array.from({ length: 50 }, (_, i) => `Name_${i + 1}`);
@@ -183,7 +184,7 @@ function testBracketTournamentEngine() {
     const rank50 = t50.getFinalRanking();
     assert(rank50.length === 50, 'All 50 candidates ranked');
     assert(rank50[0] === 'Name_1', 'Champion of 50 is Name_1');
-    assert(count50 === 49, `50 items finished in exactly 49 matches (actual: ${count50})`);
+    assert(count50 === 2 * (50 - 1), `50 items finished in exactly 98 matches (actual: ${count50})`);
 
     // Test odd sizes (2, 3, 5, 7, 25, 100)
     [2, 3, 5, 7, 25, 100].forEach(size => {
@@ -197,7 +198,7 @@ function testBracketTournamentEngine() {
         const res = t.getFinalRanking();
         assert(res.length === size, `Size ${size} produced exact ${size} ranked items`);
         assert(res[0] === 'Name_1', `Size ${size} champion is Name_1`);
-        assert(c === size - 1, `Size ${size} took exactly ${size - 1} matches (actual: ${c})`);
+        assert(c === 2 * (size - 1), `Size ${size} took exactly 2*(N-1) = ${2 * (size - 1)} matches (actual: ${c})`);
     });
 }
 
@@ -547,6 +548,55 @@ function testCompareLogic() {
     loadedPack = (BNR.STARTER_PACKS[activeCultureTest]?.['Girls'] || []).slice(0, 50);
     assert(loadedPack.length === 50, 'Culture switch loads 50 English names');
     assert(loadedPack[0] !== BNR.STARTER_PACKS['Dutch']['Girls'][0] || loadedPack[1] !== BNR.STARTER_PACKS['Dutch']['Girls'][1], 'Culture switch changed the actual candidate names');
+
+    // ── Test Suite 13: Partner Session Invariants & Share Serialization ──────
+    console.log('\nTest Suite 13: Partner Session Invariants & Share Serialization');
+
+    // 1. Partner session generation
+    assert(BNR.createPartnerSession(null, 'Liset') === null, 'createPartnerSession returns null on missing input');
+
+    const sourceSession = BNR.createSession({
+        person: 'Tibor',
+        category: 'Girls',
+        names: ['Emma', 'Mila', 'Noor', 'Liv', 'Yara']
+    });
+    sourceSession.ranking = ['Noor', 'Emma', 'Mila', 'Liv', 'Yara'];
+    sourceSession.status = 'ranked';
+
+    const partnerSession = BNR.createPartnerSession(sourceSession, 'Liset');
+    assert(partnerSession !== null, 'Partner session generated successfully');
+    assert(partnerSession.id !== sourceSession.id, 'Partner session receives a unique session ID');
+    assert(partnerSession.person === 'Liset', 'Partner session has partner person name');
+    assert(partnerSession.category === 'Girls', 'Partner session preserves category');
+    assert(partnerSession.status === 'setup', 'Partner session starts in setup status');
+    assert(partnerSession.round === 1, 'Partner session starts at round 1');
+    assert(partnerSession.ranking.length === 0, 'Partner session ranking starts empty');
+    assert(partnerSession.names.length === sourceSession.names.length, 'Partner session inherits full candidate pool');
+    assert(partnerSession.names[0] === 'Emma' && partnerSession.names[1] === 'Mila', 'Partner session preserves candidate list');
+
+    // 2. Share serialization (UTF-8, Unicode, URL-safe base64)
+    const shareData = {
+        type: 'session',
+        session: sourceSession,
+        unicodeTest: ['Chloé', 'Éléonore', 'فاطمة', 'Zoë', 'Åse']
+    };
+    const encoded = BNR.encodeSharePayload(shareData);
+    assert(typeof encoded === 'string' && encoded.length > 0, 'encodeSharePayload produces non-empty string');
+    assert(!encoded.includes('+') && !encoded.includes('/') && !encoded.includes('='), 'Encoded payload is URL-safe (no +, /, =)');
+
+    const decoded = BNR.decodeSharePayload(encoded);
+    assert(decoded !== null, 'decodeSharePayload decodes payload successfully');
+    assert(decoded.type === 'session', 'Decoded type matches');
+    assert(decoded.session.id === sourceSession.id, 'Decoded session id matches');
+    assert(decoded.session.person === 'Tibor', 'Decoded session person matches');
+    assert(decoded.unicodeTest[0] === 'Chloé', 'Unicode accent Chloé preserved');
+    assert(decoded.unicodeTest[2] === 'فاطمة', 'Arabic script فاطمة preserved');
+
+    // 3. Error resilience on corrupted or invalid payloads
+    assert(BNR.decodeSharePayload('invalid!base64***') === null, 'Corrupted base64 returns null safely');
+    assert(BNR.decodeSharePayload('') === null, 'Empty string returns null safely');
+    assert(BNR.decodeSharePayload(null) === null, 'Null argument returns null safely');
+    assert(BNR.decodeSharePayload(undefined) === null, 'Undefined argument returns null safely');
 
     console.log('\n===========================================');
     console.log(`🏁 Test Summary: ${passedTests} passed, ${failedTests} failed`);

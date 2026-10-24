@@ -313,6 +313,36 @@
     </div>
 </dialog>
 
+<!-- Partner Session Native Dialog -->
+<dialog id="modal-partner" class="bg-transparent p-3 sm:p-4 max-w-md w-full outline-none m-auto">
+    <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-7 flex flex-col gap-5 border border-stone-200/80">
+        <div class="flex items-center justify-between pb-1 border-b border-stone-100">
+            <div>
+                <h2 data-i18n="partnerModalTitle" class="font-serif italic text-2xl text-stone-900 tracking-tight">Have your partner rank</h2>
+                <p id="partner-modal-desc" class="text-xs text-stone-500 mt-0.5" data-i18n="partnerModalSub">We will use the same names your partner ranked.</p>
+            </div>
+            <button id="modal-partner-close" type="button" aria-label="Close modal" class="w-7 h-7 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center text-lg transition-colors">&times;</button>
+        </div>
+
+        <form id="form-partner-session" onsubmit="event.preventDefault();" class="flex flex-col gap-4">
+            <div class="flex flex-col gap-1.5">
+                <label for="input-partner-name" data-i18n="partnerNameLabel" class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Partner's Name</label>
+                <input id="input-partner-name" type="text" data-i18n-attr="placeholder" data-i18n="partnerNamePlaceholder" placeholder="e.g. Tibor or Liset" maxlength="50" autocapitalize="words" required class="border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-stone-50/50 transition-all placeholder:text-stone-400">
+            </div>
+
+            <div id="partner-modal-info" class="bg-stone-50 rounded-xl p-3 border border-stone-200/70 text-xs text-stone-600 flex items-center gap-2">
+                <span class="text-base">📋</span>
+                <span id="partner-modal-info-text">50 names · Girls</span>
+            </div>
+
+            <button id="btn-start-partner-ranking" type="submit" class="w-full bg-stone-900 hover:bg-stone-800 text-stone-50 font-medium py-3 rounded-xl transition-all active:scale-[0.99] text-sm shadow-sm flex items-center justify-center gap-1.5">
+                <span id="partner-start-btn-text" data-i18n="startRanking">Start Ranking</span>
+                <span>→</span>
+            </button>
+        </form>
+    </div>
+</dialog>
+
 <!-- Main App Container -->
 <div class="max-w-2xl mx-auto px-4 sm:px-6 pt-10 pb-32">
 
@@ -323,7 +353,7 @@
     </div>
 
     <!-- Brand Header -->
-    <header class="flex items-center justify-between mb-10 gap-4 flex-wrap pb-6 border-b border-stone-200/60">
+    <header class="flex items-center justify-between mb-8 gap-4 flex-wrap pb-6 border-b border-stone-200/60">
         <div>
             <h1 data-i18n="appTitle" class="font-serif italic text-3xl sm:text-4xl text-stone-900 tracking-tight">Baby Name Ranker</h1>
             <p data-i18n="appSubtitle" class="text-stone-500 text-xs sm:text-sm mt-0.5">Head-to-head comparison to find the name you both love.</p>
@@ -340,6 +370,9 @@
             </button>
         </div>
     </header>
+
+    <!-- 3-Step Process Guide & Dynamic Stepper -->
+    <div id="flow-stepper-container" class="mb-8"></div>
 
     <!-- Floating Compare Bar (Shown when 2 sessions are selected) -->
     <div id="compare-bar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-20 w-11/12 max-w-md bg-stone-900 text-stone-100 px-4 py-3 rounded-2xl shadow-xl flex items-center justify-between border border-stone-800 backdrop-blur-md">

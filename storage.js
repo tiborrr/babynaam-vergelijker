@@ -3841,6 +3841,66 @@ function createReRankSession(parentSession) {
 }
 
 /**
+ * Create a partner session using the exact same candidate names and category.
+ */
+function createPartnerSession(firstSession, partnerName) {
+    if (!firstSession) return null;
+    const names = Array.isArray(firstSession.names) && firstSession.names.length > 0
+        ? firstSession.names
+        : (firstSession.ranking || []);
+    return createSession({
+        person: partnerName,
+        category: firstSession.category,
+        names: names,
+    });
+}
+
+/**
+ * UTF-8 safe, URL-safe base64 encoder
+ */
+function encodeSharePayload(obj) {
+    try {
+        const json = JSON.stringify(obj);
+        if (typeof TextEncoder !== 'undefined') {
+            const utf8Bytes = new TextEncoder().encode(json);
+            let binary = '';
+            for (let i = 0; i < utf8Bytes.length; i++) binary += String.fromCharCode(utf8Bytes[i]);
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        } else if (typeof Buffer !== 'undefined') {
+            return Buffer.from(json, 'utf8').toString('base64url');
+        }
+        return btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * UTF-8 safe, URL-safe base64 decoder
+ */
+function decodeSharePayload(str) {
+    try {
+        if (!str || typeof str !== 'string') return null;
+        let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+        while (base64.length % 4) base64 += '=';
+        if (typeof TextDecoder !== 'undefined') {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const json = new TextDecoder().decode(bytes);
+            return JSON.parse(json);
+        } else if (typeof Buffer !== 'undefined') {
+            const json = Buffer.from(base64, 'base64').toString('utf8');
+            return JSON.parse(json);
+        }
+        const json = decodeURIComponent(escape(atob(base64)));
+        return JSON.parse(json);
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
  * Format sessions export payload
  */
 function createExportData(sessionsToExport = null) {
@@ -3857,47 +3917,85 @@ function createExportData(sessionsToExport = null) {
 
 
 // ── Knockout Bracket Tournament Engine ────────────────────────
+// ── Double-Elimination Tournament Engine (with Herkansing / Second-Chance) ───
 class BracketTournament {
     constructor(names) {
         this.names = Array.isArray(names) ? [...names] : [];
-        this.activeCandidates = [...this.names];
+        this.winners = [...this.names];  // 0 losses (Winners Bracket)
+        this.losers = [];               // 1 loss (Losers / Herkansing Bracket)
+        this.eliminated = [];           // 2 losses (Eliminated in reverse placement order)
         this.roundIndex = 1;
         this.currentMatches = [];
         this.currentMatchIndex = 0;
         this.roundWinners = [];
         this.roundLosers = [];
-        this.byeCandidate = null;
-        this.eliminatedTiers = []; // [round1Losers, round2Losers, ...]
+        this.bye = null;
         this.totalMatchesCompleted = 0;
-        this.estimatedTotalMatches = Math.max(1, this.names.length - 1);
+        this.estimatedTotalMatches = Math.max(1, (this.names.length * 2) - 2);
         
-        this.phase = 'bracket'; // 'bracket', 'final', 'finished'
+        this.phase = 'winners'; // 'winners', 'losers', 'grand_final', 'reset_final', 'finished'
         this.finalWinner = null;
-        this.finalLoser = null;
+        this.finalRanking = null;
         this.lastWinner = null;
         this.deleted = [];
         this.undoStack = [];
         
-        this.initRound();
+        this.initNextRound();
     }
 
-    initRound() {
-        if (this.activeCandidates.length <= 1) {
-            this.finalWinner = this.activeCandidates[0] || null;
-            this.phase = 'finished';
-            return;
-        }
+    get activeCandidates() {
+        return [...this.winners, ...this.losers].filter(n => !this.deleted.includes(n));
+    }
 
-        if (this.activeCandidates.length === 2) {
-            this.phase = 'final';
-            this.currentMatches = [[this.activeCandidates[0], this.activeCandidates[1]]];
+    initNextRound() {
+        // Filter out any candidates marked deleted
+        this.winners = this.winners.filter(n => !this.deleted.includes(n));
+        this.losers = this.losers.filter(n => !this.deleted.includes(n));
+
+        if (this.winners.length === 1 && this.losers.length === 1) {
+            this.phase = 'grand_final';
+            this.currentMatches = [[this.winners[0], this.losers[0]]];
             this.currentMatchIndex = 0;
             return;
         }
 
-        this.phase = 'bracket';
-        const list = [...this.activeCandidates];
-        this.byeCandidate = (list.length % 2 !== 0) ? list.pop() : null;
+        if (this.winners.length <= 1 && this.losers.length <= 1) {
+            if (this.winners.length === 1 && this.losers.length === 0) {
+                this.finalWinner = this.winners[0];
+                this.finalRanking = [this.winners[0], ...[...this.eliminated].reverse()];
+                this.phase = 'finished';
+                return;
+            }
+            if (this.winners.length === 0 && this.losers.length === 1) {
+                this.finalWinner = this.losers[0];
+                this.finalRanking = [this.losers[0], ...[...this.eliminated].reverse()];
+                this.phase = 'finished';
+                return;
+            }
+            if (this.winners.length === 0 && this.losers.length === 0) {
+                this.finalRanking = [...[...this.eliminated].reverse()];
+                this.phase = 'finished';
+                return;
+            }
+        }
+
+        // Schedule round: alternate between losers (herkansing) and winners
+        if ((this.losers.length >= 2 && this.phase === 'winners') || this.winners.length <= 1) {
+            this.phase = 'losers';
+            this.scheduleMatches(this.losers);
+        } else if (this.winners.length >= 2) {
+            this.phase = 'winners';
+            this.scheduleMatches(this.winners);
+        } else {
+            this.finalWinner = this.winners[0] || this.losers[0] || null;
+            this.finalRanking = [...this.winners, ...this.losers, ...[...this.eliminated].reverse()];
+            this.phase = 'finished';
+        }
+    }
+
+    scheduleMatches(pool) {
+        const list = [...pool];
+        const bye = (list.length % 2 !== 0) ? list.pop() : null;
         const matches = [];
         for (let i = 0; i < list.length; i += 2) {
             matches.push([list[i], list[i + 1]]);
@@ -3912,6 +4010,7 @@ class BracketTournament {
             }
         }
 
+        this.bye = bye;
         this.currentMatches = matches;
         this.currentMatchIndex = 0;
         this.roundWinners = [];
@@ -3930,24 +4029,61 @@ class BracketTournament {
         this.undoStack.push(this.serialize());
 
         const [a, b] = match;
-        const winner = preference <= 0 ? a : b;
-        const loser = preference <= 0 ? b : a;
+        const win = preference <= 0 ? a : b;
+        const loss = preference <= 0 ? b : a;
 
         this.totalMatchesCompleted++;
-        this.lastWinner = winner;
+        this.lastWinner = win;
 
-        if (this.phase === 'final') {
-            this.finalWinner = winner;
-            this.finalLoser = loser;
+        if (this.phase === 'grand_final') {
+            if (win === this.winners[0]) {
+                this.finalWinner = win;
+                this.finalRanking = [win, loss, ...[...this.eliminated].reverse()];
+                this.phase = 'finished';
+                return;
+            } else {
+                // Losers champion won first match: reset decider
+                this.phase = 'reset_final';
+                this.currentMatches = [[win, loss]];
+                this.currentMatchIndex = 0;
+                return;
+            }
+        }
+
+        if (this.phase === 'reset_final') {
+            this.finalWinner = win;
+            this.finalRanking = [win, loss, ...[...this.eliminated].reverse()];
             this.phase = 'finished';
             return;
         }
 
-        this.roundWinners.push(winner);
-        this.roundLosers.push(loser);
+        this.roundWinners.push(win);
+        this.roundLosers.push(loss);
         this.currentMatchIndex++;
 
-        this.checkAdvanceRound();
+        if (this.currentMatchIndex >= this.currentMatches.length) {
+            this.finishMatchRound();
+        }
+    }
+
+    finishMatchRound() {
+        if (this.phase === 'winners') {
+            const nextWinners = [...this.roundWinners];
+            if (this.bye) nextWinners.push(this.bye);
+            this.winners = nextWinners;
+            // Losers from winners bracket drop into losers bracket (1st loss)
+            this.losers.push(...this.roundLosers);
+            this.roundIndex++;
+            this.initNextRound();
+        } else if (this.phase === 'losers') {
+            const nextLosers = [...this.roundWinners];
+            if (this.bye) nextLosers.push(this.bye);
+            this.losers = nextLosers;
+            // Losers from losers bracket are eliminated (2nd loss)
+            this.eliminated.push(...this.roundLosers);
+            this.roundIndex++;
+            this.initNextRound();
+        }
     }
 
     discard(name) {
@@ -3955,29 +4091,31 @@ class BracketTournament {
         if (!match) return;
 
         this.undoStack.push(this.serialize());
-        const [a, b] = match;
         if (!this.deleted.includes(name)) this.deleted.push(name);
 
+        const [a, b] = match;
         if (name === a && name === b) {
             this.discardBoth();
             return;
         }
 
-        const winner = (name === a) ? b : a;
+        const win = (name === a) ? b : a;
         this.totalMatchesCompleted++;
-        this.lastWinner = winner;
+        this.lastWinner = win;
 
-        if (this.phase === 'final') {
-            this.finalWinner = winner;
-            this.finalLoser = null;
+        if (this.phase === 'grand_final' || this.phase === 'reset_final') {
+            this.finalWinner = win;
+            this.finalRanking = [win, ...[...this.eliminated].reverse()];
             this.phase = 'finished';
             return;
         }
 
-        this.roundWinners.push(winner);
+        this.roundWinners.push(win);
         this.currentMatchIndex++;
 
-        this.checkAdvanceRound();
+        if (this.currentMatchIndex >= this.currentMatches.length) {
+            this.finishMatchRound();
+        }
     }
 
     discardBoth() {
@@ -3991,29 +4129,15 @@ class BracketTournament {
 
         this.totalMatchesCompleted++;
 
-        if (this.phase === 'final') {
-            this.finalWinner = null;
-            this.finalLoser = null;
+        if (this.phase === 'grand_final' || this.phase === 'reset_final') {
+            this.finalRanking = [...[...this.eliminated].reverse()];
             this.phase = 'finished';
             return;
         }
 
         this.currentMatchIndex++;
-        this.checkAdvanceRound();
-    }
-
-    checkAdvanceRound() {
         if (this.currentMatchIndex >= this.currentMatches.length) {
-            if (this.byeCandidate) {
-                this.roundWinners.push(this.byeCandidate);
-                this.byeCandidate = null;
-            }
-            if (this.roundLosers.length > 0) {
-                this.eliminatedTiers.push(this.roundLosers);
-            }
-            this.activeCandidates = [...this.roundWinners];
-            this.roundIndex++;
-            this.initRound();
+            this.finishMatchRound();
         }
     }
 
@@ -4026,21 +4150,22 @@ class BracketTournament {
 
     serialize() {
         return JSON.stringify({
-            activeCandidates: this.activeCandidates,
-            roundIndex: this.roundIndex,
+            winners: this.winners,
+            losers: this.losers,
+            eliminated: this.eliminated,
             currentMatches: this.currentMatches,
             currentMatchIndex: this.currentMatchIndex,
-            roundWinners: this.roundWinners,
-            roundLosers: this.roundLosers,
-            byeCandidate: this.byeCandidate,
-            eliminatedTiers: this.eliminatedTiers,
+            phase: this.phase,
             totalMatchesCompleted: this.totalMatchesCompleted,
             estimatedTotalMatches: this.estimatedTotalMatches,
-            phase: this.phase,
+            roundIndex: this.roundIndex,
             finalWinner: this.finalWinner,
-            finalLoser: this.finalLoser,
+            finalRanking: this.finalRanking,
             lastWinner: this.lastWinner,
-            deleted: this.deleted
+            deleted: this.deleted,
+            bye: this.bye,
+            roundWinners: this.roundWinners,
+            roundLosers: this.roundLosers
         });
     }
 
@@ -4049,25 +4174,21 @@ class BracketTournament {
     }
 
     getFinalRanking() {
+        let baseList = this.finalRanking;
+        if (!baseList || baseList.length === 0) {
+            baseList = [...this.winners, ...this.losers, ...[...this.eliminated].reverse()];
+        }
         const result = [];
-        if (this.finalWinner && !this.deleted.includes(this.finalWinner)) result.push(this.finalWinner);
-        if (this.finalLoser && !this.deleted.includes(this.finalLoser)) result.push(this.finalLoser);
-
-        for (let i = this.eliminatedTiers.length - 1; i >= 0; i--) {
-            const tier = this.eliminatedTiers[i];
-            for (const name of tier) {
-                if (!result.includes(name) && !this.deleted.includes(name)) {
-                    result.push(name);
-                }
+        for (const name of baseList) {
+            if (!result.includes(name) && !this.deleted.includes(name)) {
+                result.push(name);
             }
         }
-
         for (const name of this.names) {
             if (!result.includes(name) && !this.deleted.includes(name)) {
                 result.push(name);
             }
         }
-
         return result;
     }
 }
@@ -4081,6 +4202,9 @@ const BNR_API = {
     deleteSession,
     createSession,
     createReRankSession,
+    createPartnerSession,
+    encodeSharePayload,
+    decodeSharePayload,
     generateId,
     validateSession,
     escapeHtml,
