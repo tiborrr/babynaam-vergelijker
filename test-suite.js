@@ -244,6 +244,32 @@ function testCompareLogic() {
     assert(combined[0].name === 'Isa' || combined[0].name === 'Nola', 'Top mutual names are Isa / Nola');
     assert(combined[0].avgRank === 1.5, 'Top name average rank calculated correctly (1.5)');
 
+    // Test Dual Rankings (Ranking vs Agreement)
+    // 1. Assign Ranking order (avgRank asc, diff asc, name asc)
+    const byRanking = [...combined].sort((a, b) => {
+        if (a.avgRank !== b.avgRank) return a.avgRank - b.avgRank;
+        if (a.diff !== b.diff) return a.diff - b.diff;
+        return a.name.localeCompare(b.name);
+    });
+    byRanking.forEach((it, idx) => { it.rankRanking = idx + 1; });
+
+    // 2. Assign Agreement order (diff asc, avgRank asc, name asc)
+    const byAgreement = [...combined].sort((a, b) => {
+        if (a.diff !== b.diff) return a.diff - b.diff;
+        if (a.avgRank !== b.avgRank) return a.avgRank - b.avgRank;
+        return a.name.localeCompare(b.name);
+    });
+    byAgreement.forEach((it, idx) => {
+        it.rankAgreement = idx + 1;
+        it.agreementPct = it.diff === 0 ? 100 : Math.max(0, Math.round((1 - (it.diff / 7)) * 100));
+    });
+
+    assert(byRanking[0].rankRanking === 1, 'Top candidate has Ranking #1');
+    assert(byAgreement[0].diff === 1, 'Best agreement has minimal rank difference (1)');
+    const lana = combined.find(it => it.name === 'Lana');
+    assert(lana.diff === 3, 'Lana has highest disagreement (diff 3)');
+    assert(lana.rankAgreement === 7, 'Lana correctly ranks lowest (#7) on Agreement due to divergence');
+
     // Test Deletion from compare view syncing to BOTH source sessions
     const deleteTarget = 'Eva';
     if (!liset.deleted.includes(deleteTarget) && liset.ranking.includes(deleteTarget)) {

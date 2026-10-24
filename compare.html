@@ -89,7 +89,7 @@
         <div class="flex items-center justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 mb-1">
-                    <span data-i18n="statusTopMutual" class="text-[10px] font-semibold uppercase tracking-widest text-stone-500 bg-stone-100 px-2.5 py-0.5 rounded-md">Top Consensus Match</span>
+                    <span id="match-banner-badge" data-i18n="statusTopMutual" class="text-[10px] font-semibold uppercase tracking-widest text-stone-500 bg-stone-100 px-2.5 py-0.5 rounded-md">Top Consensus Match</span>
                 </div>
                 <h3 id="match-banner-title" class="font-serif italic text-2xl sm:text-3xl text-stone-900 mt-1">
                     #1 <span id="top-match-name" class="font-normal not-italic underline decoration-stone-300 underline-offset-4">...</span>
@@ -118,25 +118,37 @@
     <!-- Results Table -->
     <div id="table-wrap" class="hidden bg-white rounded-2xl shadow-sm border border-stone-200/80 overflow-hidden mb-6">
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse min-w-[540px]">
+            <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-stone-50 border-b border-stone-200/80 text-[10px] font-semibold text-stone-500 uppercase tracking-wider select-none">
-                        <th class="p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="overall">
-                            <div class="flex items-center gap-1"><span data-i18n="colRank">Consensus</span> <span id="si-overall" class="text-stone-900">▲</span></div>
+                        <th class="p-2 sm:p-3.5 cursor-pointer hover:bg-stone-100 transition-colors text-center w-14 sm:w-24" data-sort="ranking" title="Sort by Ranking">
+                            <div class="flex items-center justify-center gap-0.5 sm:gap-1">
+                                <span data-i18n="colRanking">Ranking</span>
+                                <span id="si-ranking" class="text-stone-900 font-bold">▲</span>
+                            </div>
                         </th>
-                        <th class="p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="name">
-                            <div class="flex items-center gap-1"><span data-i18n="colName">Name</span> <span id="si-name" class="text-stone-300">↕</span></div>
+                        <th class="p-2 sm:p-3.5 cursor-pointer hover:bg-stone-100 transition-colors text-center w-16 sm:w-28" data-sort="agreement" title="Sort by Agreement">
+                            <div class="flex items-center justify-center gap-0.5 sm:gap-1">
+                                <span data-i18n="colAgreement">Agreement</span>
+                                <span id="si-agreement" class="text-stone-300">↕</span>
+                            </div>
                         </th>
-                        <th class="p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="rankA">
+                        <th class="p-2 sm:p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="name">
+                            <div class="flex items-center gap-1">
+                                <span data-i18n="colName">Name</span>
+                                <span id="si-name" class="text-stone-300">↕</span>
+                            </div>
+                        </th>
+                        <th class="hidden sm:table-cell p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="rankA">
                             <div class="flex items-center gap-1"><span id="col-a-label">Partner 1</span> <span id="si-rankA" class="text-stone-300">↕</span></div>
                         </th>
-                        <th class="p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="rankB">
+                        <th class="hidden sm:table-cell p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="rankB">
                             <div class="flex items-center gap-1"><span id="col-b-label">Partner 2</span> <span id="si-rankB" class="text-stone-300">↕</span></div>
                         </th>
-                        <th class="p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="diff">
+                        <th class="hidden sm:table-cell p-3.5 cursor-pointer hover:bg-stone-100 transition-colors" data-sort="diff">
                             <div class="flex items-center gap-1"><span data-i18n="colDiff">Difference</span> <span id="si-diff" class="text-stone-300">↕</span></div>
                         </th>
-                        <th class="p-3.5 text-right pr-4" data-i18n="delete">Action</th>
+                        <th class="p-2 sm:p-3.5 text-right pr-3 sm:pr-4 w-9 sm:w-14" data-i18n="delete">Action</th>
                     </tr>
                 </thead>
                 <tbody id="results-tbody" class="divide-y divide-stone-100 text-xs sm:text-sm"></tbody>

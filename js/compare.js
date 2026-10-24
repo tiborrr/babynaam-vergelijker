@@ -12,7 +12,7 @@
     let sessionB = null;
     let combined = [];
     let deletedNames = new Set();
-    let currentSort = { column: 'overall', direction: 'asc' };
+    let currentSort = { column: 'ranking', direction: 'asc' };
     let searchQuery = '';
     let currentFilter = 'all'; // 'all' | 'top' | 'exact'
 
@@ -105,6 +105,29 @@
         if (sessionA && sessionB) buildCombined();
     }
 
+    function computeRanks(list, maxRank) {
+        if (!list || list.length === 0) return;
+        const byRanking = [...list].sort((a, b) => {
+            if (a.avgRank !== b.avgRank) return a.avgRank - b.avgRank;
+            if (a.diff !== b.diff) return a.diff - b.diff;
+            return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        });
+        byRanking.forEach((item, idx) => {
+            item.rankRanking = idx + 1;
+        });
+
+        const maxDiff = Math.max(1, (maxRank || list.length) - 1);
+        const byAgreement = [...list].sort((a, b) => {
+            if (a.diff !== b.diff) return a.diff - b.diff;
+            if (a.avgRank !== b.avgRank) return a.avgRank - b.avgRank;
+            return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        });
+        byAgreement.forEach((item, idx) => {
+            item.rankAgreement = idx + 1;
+            item.agreementPct = item.diff === 0 ? 100 : Math.max(0, Math.round((1 - (item.diff / maxDiff)) * 100));
+        });
+    }
+
     // ── Data Merge & Consensus ───────────────────────────
     function buildCombined() {
         const nameMap = new Map();
@@ -135,7 +158,9 @@
             };
         });
 
-        currentSort = { column: 'overall', direction: 'asc' };
+        computeRanks(combined, maxRank);
+
+        currentSort = { column: 'ranking', direction: 'asc' };
         searchQuery = '';
         currentFilter = 'all';
         document.getElementById('search-input').value = '';
@@ -185,6 +210,12 @@
         }, 160);
     }
 
+    function recomputeActiveRanks() {
+        const maxRank = sessionA && sessionB ? Math.max(sessionA.ranking.length, sessionB.ranking.length) + 1 : 99;
+        const active = combined.filter(it => !deletedNames.has(it.name));
+        computeRanks(active, maxRank);
+    }
+
     function updateMatchBanner() {
         const active = getSortedActive();
         if (active.length > 0) {
@@ -192,8 +223,31 @@
             document.getElementById('top-match-name').textContent = topMatch.name;
             const rA = topMatch.rankA != null ? `#${topMatch.rankA}` : '-';
             const rB = topMatch.rankB != null ? `#${topMatch.rankB}` : '-';
-            document.getElementById('match-banner-desc').textContent =
-                `${sessionA.person}: ${rA} · ${sessionB.person}: ${rB} · Avg #${topMatch.avgRank}`;
+            const badgeEl = document.getElementById('match-banner-badge');
+            
+            const isAgreementSort = currentSort.column === 'agreement' || currentSort.column === 'diff';
+            if (isAgreementSort) {
+                if (badgeEl) {
+                    badgeEl.textContent = BNR_I18N.t('statusTopAgreement');
+                    badgeEl.className = 'text-[10px] font-semibold uppercase tracking-widest text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded-md';
+                }
+                document.getElementById('match-banner-desc').textContent =
+                    `${sessionA.person}: ${rA} · ${sessionB.person}: ${rB} · Δ${topMatch.diff} (${topMatch.agreementPct}% match)`;
+            } else if (topMatch.rankAgreement === 1) {
+                if (badgeEl) {
+                    badgeEl.textContent = BNR_I18N.t('unanimousMatch');
+                    badgeEl.className = 'text-[10px] font-semibold uppercase tracking-widest text-amber-950 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-md';
+                }
+                document.getElementById('match-banner-desc').textContent =
+                    `${sessionA.person}: ${rA} · ${sessionB.person}: ${rB} · Ranking #1 · Overeenstemming #1 (${topMatch.agreementPct}%)`;
+            } else {
+                if (badgeEl) {
+                    badgeEl.textContent = BNR_I18N.t('statusTopRanking');
+                    badgeEl.className = 'text-[10px] font-semibold uppercase tracking-widest text-stone-700 bg-stone-100 px-2.5 py-0.5 rounded-md';
+                }
+                document.getElementById('match-banner-desc').textContent =
+                    `${sessionA.person}: ${rA} · ${sessionB.person}: ${rB} · Ranking #1 · Overeenstemming #${topMatch.rankAgreement} (${topMatch.agreementPct}%)`;
+            }
         }
     }
 
@@ -245,16 +299,16 @@
 
         list.sort((a, b) => {
             let cmp = 0;
-            if (currentSort.column === 'overall') {
-                cmp = a.avgRank !== b.avgRank ? a.avgRank - b.avgRank : a.diff - b.diff;
+            if (currentSort.column === 'ranking' || currentSort.column === 'overall') {
+                cmp = (a.rankRanking ?? 999) - (b.rankRanking ?? 999);
+            } else if (currentSort.column === 'agreement' || currentSort.column === 'diff') {
+                cmp = (a.rankAgreement ?? 999) - (b.rankAgreement ?? 999);
             } else if (currentSort.column === 'name') {
                 cmp = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
             } else if (currentSort.column === 'rankA') {
                 cmp = (a.rankA ?? 999) - (b.rankA ?? 999);
             } else if (currentSort.column === 'rankB') {
                 cmp = (a.rankB ?? 999) - (b.rankB ?? 999);
-            } else if (currentSort.column === 'diff') {
-                cmp = a.diff - b.diff;
             }
             return currentSort.direction === 'asc' ? cmp : -cmp;
         });
@@ -267,15 +321,24 @@
     }
 
     function updateSortIndicators() {
-        ['overall', 'name', 'rankA', 'rankB', 'diff'].forEach(col => {
+        ['ranking', 'agreement', 'name', 'rankA', 'rankB', 'diff'].forEach(col => {
             const el = document.getElementById(`si-${col}`);
             if (!el) return;
-            if (currentSort.column === col) {
+            const th = el.closest('th');
+            const isActive = currentSort.column === col ||
+                (col === 'ranking' && currentSort.column === 'overall') ||
+                (col === 'agreement' && currentSort.column === 'diff');
+
+            if (isActive) {
                 el.textContent = currentSort.direction === 'asc' ? '▲' : '▼';
-                el.className = 'text-stone-900 font-bold';
+                el.className = (col === 'agreement' || currentSort.column === 'agreement' || currentSort.column === 'diff') && (col === 'agreement')
+                    ? 'text-emerald-700 font-bold'
+                    : 'text-stone-900 font-bold';
+                if (th) th.classList.add('bg-stone-100');
             } else {
                 el.textContent = '↕';
                 el.className = 'text-stone-300';
+                if (th) th.classList.remove('bg-stone-100');
             }
         });
     }
@@ -293,6 +356,7 @@
             BNR.saveSession(sessionB);
         }
 
+        recomputeActiveRanks();
         updateMatchBanner();
         renderTable();
         toast(`Removed "${name}"`);
@@ -304,6 +368,7 @@
         if (sessionA) { sessionA.deleted = sessionA.deleted.filter(n => n !== name); BNR.saveSession(sessionA); }
         if (sessionB) { sessionB.deleted = sessionB.deleted.filter(n => n !== name); BNR.saveSession(sessionB); }
 
+        recomputeActiveRanks();
         updateMatchBanner();
         renderTable();
         toast(`Restored "${name}"`);
@@ -313,6 +378,7 @@
         deletedNames.clear();
         if (sessionA) { sessionA.deleted = []; BNR.saveSession(sessionA); }
         if (sessionB) { sessionB.deleted = []; BNR.saveSession(sessionB); }
+        recomputeActiveRanks();
         updateMatchBanner();
         renderTable();
         toast(BNR_I18N.t('restoreAll'));
@@ -342,7 +408,7 @@
         
         const header = `✦ ${personA} & ${personB} — ${BNR_I18N.t('consensusTitle')}:\n`;
         const text = header + items.map((item, idx) =>
-            `${idx + 1}. ${item.name} (${personA}: #${item.rankA ?? '-'}, ${personB}: #${item.rankB ?? '-'})`
+            `${idx + 1}. ${item.name} (Ranking: #${item.rankRanking}, ${BNR_I18N.t('colAgreement')}: #${item.rankAgreement} [${item.agreementPct}%] · ${personA}: #${item.rankA ?? '-'}, ${personB}: #${item.rankB ?? '-'})`
         ).join('\n');
         
         if (navigator.share) {
@@ -369,11 +435,44 @@
         tbody.innerHTML = '';
 
         if (items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-stone-400 font-normal">${BNR_I18N.t('noMutualNames')}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-stone-400 font-normal">${BNR_I18N.t('noMutualNames')}</td></tr>`;
         } else {
+            const isRankingActive = currentSort.column === 'ranking' || currentSort.column === 'overall';
+            const isAgreementActive = currentSort.column === 'agreement' || currentSort.column === 'diff';
+            const personA = sessionA ? sessionA.person : 'Partner 1';
+            const personB = sessionB ? sessionB.person : 'Partner 2';
+            const escapedPersonA = BNR.escapeHtml(personA);
+            const escapedPersonB = BNR.escapeHtml(personB);
+
             items.forEach((item, index) => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-stone-50/70 transition-colors';
+
+                // Ranking badge
+                let rankBadge;
+                if (isRankingActive && index < 3 && currentSort.direction === 'asc') {
+                    rankBadge = `<span class="w-6 h-6 rounded-md bg-stone-900 text-stone-50 flex items-center justify-center font-mono text-[10px] font-semibold mx-auto shadow-xs">#${item.rankRanking}</span>`;
+                } else {
+                    rankBadge = `<span class="font-mono text-xs font-semibold ${isRankingActive ? 'text-stone-900 bg-stone-200/90' : 'text-stone-600 bg-stone-100'} px-1.5 py-0.5 rounded text-center inline-block">#${item.rankRanking}</span>`;
+                }
+
+                // Agreement badge
+                let agreementBadge;
+                if (isAgreementActive && index < 3 && currentSort.direction === 'asc') {
+                    agreementBadge = `
+                        <div class="flex flex-col items-center">
+                            <span class="w-6 h-6 rounded-md bg-emerald-700 text-white flex items-center justify-center font-mono text-[10px] font-semibold mx-auto shadow-xs">#${item.rankAgreement}</span>
+                            <span class="text-[9px] font-bold text-emerald-800 mt-0.5">${item.agreementPct}%</span>
+                        </div>
+                    `;
+                } else {
+                    agreementBadge = `
+                        <div class="flex flex-col items-center">
+                            <span class="font-mono text-xs font-semibold ${isAgreementActive ? 'text-emerald-950 bg-emerald-100 border border-emerald-300' : (item.diff === 0 ? 'text-emerald-800 bg-emerald-50 border border-emerald-200/60' : 'text-stone-600 bg-stone-100')} px-1.5 py-0.5 rounded text-center inline-block">#${item.rankAgreement}</span>
+                            <span class="text-[9px] font-medium text-stone-500 mt-0.5">${item.agreementPct}%</span>
+                        </div>
+                    `;
+                }
 
                 const rankAStr = item.rankA != null ? `<span class="font-mono text-xs text-stone-700 font-medium">#${item.rankA}</span>` : `<span class="text-stone-300 font-mono text-xs">—</span>`;
                 const rankBStr = item.rankB != null ? `<span class="font-mono text-xs text-stone-700 font-medium">#${item.rankB}</span>` : `<span class="text-stone-300 font-mono text-xs">—</span>`;
@@ -383,9 +482,9 @@
                     if (item.diff === 0) {
                         diffHtml = `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200/70 text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 w-max">★ ${BNR_I18N.t('statusExactMatch')}</span>`;
                     } else if (item.diff <= 2) {
-                        diffHtml = `<span class="bg-emerald-50/70 text-emerald-700 border border-emerald-100 text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 w-max">♥ Δ ${item.diff} ${BNR_I18N.t('statusGreatMatch')}</span>`;
+                        diffHtml = `<span class="bg-emerald-50/70 text-emerald-700 border border-emerald-100 text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 w-max">♥ Δ ${item.diff}</span>`;
                     } else if (item.diff <= 5) {
-                        diffHtml = `<span class="bg-stone-100 text-stone-700 text-[10px] font-medium px-2 py-0.5 rounded-md flex items-center gap-1 w-max">Δ ${item.diff} ${BNR_I18N.t('statusModerateAgree')}</span>`;
+                        diffHtml = `<span class="bg-stone-100 text-stone-700 text-[10px] font-medium px-2 py-0.5 rounded-md flex items-center gap-1 w-max">Δ ${item.diff}</span>`;
                     } else {
                         diffHtml = `<span class="bg-stone-50 text-stone-500 text-[10px] font-mono px-2 py-0.5 rounded-md">Δ ${item.diff}</span>`;
                     }
@@ -393,21 +492,25 @@
                     diffHtml = `<span class="text-stone-400 text-xs">—</span>`;
                 }
 
-                const rankNumber = String(index + 1).padStart(2, '0');
-                const isTop3 = currentSort.column === 'overall' && currentSort.direction === 'asc' && !searchQuery && currentFilter === 'all' && index < 3;
-                const rankBadge = isTop3
-                    ? `<span class="w-6 h-6 rounded-md bg-stone-900 text-stone-50 flex items-center justify-center font-mono text-[10px] font-semibold">${rankNumber}</span>`
-                    : `<span class="font-mono text-xs text-stone-400 ml-1">${rankNumber}</span>`;
-
                 const escapedName = BNR.escapeHtml(item.name);
 
                 tr.innerHTML = `
-                    <td class="p-3.5 align-middle">${rankBadge}</td>
-                    <td class="p-3.5 font-serif text-base text-stone-900">${escapedName}</td>
-                    <td class="p-3.5">${rankAStr}</td>
-                    <td class="p-3.5">${rankBStr}</td>
-                    <td class="p-3.5">${diffHtml}</td>
-                    <td class="p-3.5 text-right pr-4">
+                    <td class="p-2 sm:p-3.5 text-center align-middle">${rankBadge}</td>
+                    <td class="p-2 sm:p-3.5 text-center align-middle">${agreementBadge}</td>
+                    <td class="p-2 sm:p-3.5 align-middle">
+                        <div class="font-serif text-sm sm:text-base text-stone-900 font-medium">${escapedName}</div>
+                        <div class="sm:hidden text-[10px] text-stone-500 font-sans flex items-center gap-1 mt-0.5 flex-wrap">
+                            <span>${escapedPersonA}: #${item.rankA ?? '-'}</span>
+                            <span class="text-stone-300">·</span>
+                            <span>${escapedPersonB}: #${item.rankB ?? '-'}</span>
+                            <span class="text-stone-300">·</span>
+                            <span class="${item.diff === 0 ? 'text-emerald-700 font-semibold' : 'text-stone-600'}">Δ${item.diff}</span>
+                        </div>
+                    </td>
+                    <td class="hidden sm:table-cell p-3.5 align-middle">${rankAStr}</td>
+                    <td class="hidden sm:table-cell p-3.5 align-middle">${rankBStr}</td>
+                    <td class="hidden sm:table-cell p-3.5 align-middle">${diffHtml}</td>
+                    <td class="p-2 sm:p-3.5 text-right pr-2 sm:pr-4 align-middle">
                         <button data-action="delete" data-name="${escapedName}" class="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg hover:bg-stone-100 transition-colors" title="${BNR_I18N.t('delete')} ${escapedName}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>
