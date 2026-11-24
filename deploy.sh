@@ -1,79 +1,36 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 # ==============================================================================
-# Baby Name Ranker — Deployment Script
-# Deploys static files to BABY server (~/deployments/baby/public) and ensures
-# the baby-web Docker container is running on gateway-net.
+# Baby Name Ranker — manual deployment (fallback)
+#
+# Normally a push to main deploys automatically (.github/workflows/ci.yml).
+# This script does the same by hand from a machine that has the BABY ssh alias
+# (Omarchy, user tibor): build, test, package and hand the package to
+# /usr/local/bin/deploy-static on the server, which tests the nginx config,
+# swaps the files and rolls back when the site does not answer.
 # ==============================================================================
 
 SSH_HOST="BABY"
-REMOTE_DIR="~/deployments/baby"
-PUBLIC_DIR="${REMOTE_DIR}/public"
+cd "$(dirname "$0")"
 
-SSH_OPTS="ssh -o RemoteCommand=none -o RequestTTY=no"
+if [ -n "$(git status --porcelain)" ]; then
+    echo "⚠️  Uncommitted changes: the deploy is labelled with HEAD, but contains your working tree."
+fi
+REV="$(git rev-parse HEAD)"
 
 echo "🎨 Building static assets & running tests..."
 npm run build
 npm test
 
-echo "🚀 Deploying Baby Name Ranker to https://baby.casteleijn.com ..."
+echo "📦 Packaging site..."
+./scripts/package-site.sh
 
-# 1. Ensure remote directories exist
-echo "📦 Setting up remote directories..."
-ssh -o RemoteCommand=none -o RequestTTY=no "${SSH_HOST}" "mkdir -p ${PUBLIC_DIR}"
+echo "🚀 Deploying $REV to https://baby.casteleijn.com ..."
+ssh -o RemoteCommand=none -o RequestTTY=no "${SSH_HOST}" \
+    /usr/local/bin/deploy-static baby "$REV" < dist/site.tar.gz
 
-# 2. Sync web application files & Nginx config via rsync (differential delta transfer)
-echo "📤 Syncing application files & config via rsync..."
-rsync -avz -e "${SSH_OPTS}" \
-    index.html \
-    ranker.html \
-    compare.html \
-    storage.js \
-    similar-names.js \
-    i18n.js \
-    sitemap.xml \
-    robots.txt \
-    site.webmanifest \
-    favicon.svg \
-    og-image.jpg \
-    fonts \
-    css \
-    js \
-    vendor \
-    "${SSH_HOST}:${PUBLIC_DIR}/"
-
-rsync -avz -e "${SSH_OPTS}" \
-    nginx.conf \
-    "${SSH_HOST}:${REMOTE_DIR}/nginx.conf"
-
-# 3. Ensure docker-compose.yml exists and container is running
-echo "🐳 Verifying Docker container..."
-ssh -o RemoteCommand=none -o RequestTTY=no "${SSH_HOST}" "
-cat << 'EOF' > ${REMOTE_DIR}/docker-compose.yml
-services:
-  baby-web:
-    image: nginx:alpine
-    container_name: baby-web
-    restart: unless-stopped
-    volumes:
-      - ./public:/usr/share/nginx/html:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      - gateway-net
-
-networks:
-  gateway-net:
-    external: true
-EOF
-cd ${REMOTE_DIR} && docker compose up -d --force-recreate
-"
-
-# 4. Verify deployment
-echo "🔍 Checking live endpoint..."
-sleep 1
 STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://baby.casteleijn.com/ || true)
-
 if [ "$STATUS_CODE" = "200" ]; then
     echo "✅ Successfully deployed to https://baby.casteleijn.com (HTTP 200 OK)"
 else
