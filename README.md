@@ -4,7 +4,7 @@
 
 [![Live Demo](https://img.shields.io/badge/Demo-baby.casteleijn.com-1C1815?style=flat-square&logo=google-chrome&logoColor=white)](https://baby.casteleijn.com)
 [![GitHub Pages Preview](https://img.shields.io/badge/Preview-GitHub%20Pages-24292e?style=flat-square&logo=github)](https://tiborrr.github.io/babynaam-vergelijker/)
-[![CI Status](https://img.shields.io/github/actions/workflow/status/tiborrr/babynaam-vergelijker/deploy-pages.yml?branch=main&style=flat-square&label=Tests%20%26%20Deploy)](https://github.com/tiborrr/babynaam-vergelijker/actions)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/tiborrr/babynaam-vergelijker/ci.yml?branch=main&style=flat-square&label=Tests%20%26%20Deploy)](https://github.com/tiborrr/babynaam-vergelijker/actions)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20First-emerald?style=flat-square)](https://baby.casteleijn.com)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero%20Build%20Step-stone?style=flat-square)](https://baby.casteleijn.com)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
@@ -67,6 +67,11 @@ docker compose up -d
 ---
 
 ## 🌐 Deploy to Production
+
+**Live site:** every push to `main` is tested and deployed automatically to
+[baby.casteleijn.com](https://baby.casteleijn.com) by `.github/workflows/ci.yml`
+(over Tailscale to the home server; see the workflow for details). `./deploy.sh`
+does the same by hand. New public files must be added to `scripts/package-site.sh`.
 
 Because the app is 100% static, you can deploy it for free anywhere:
 
